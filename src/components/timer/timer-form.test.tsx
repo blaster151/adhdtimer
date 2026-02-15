@@ -71,6 +71,40 @@ vi.mock('firebase/firestore', () => ({
   },
 }));
 
+// Mock @dnd-kit
+vi.mock('@dnd-kit/core', () => ({
+  DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  closestCenter: vi.fn(),
+  PointerSensor: vi.fn(),
+  TouchSensor: vi.fn(),
+  KeyboardSensor: vi.fn(),
+  useSensor: vi.fn(),
+  useSensors: vi.fn(() => []),
+}));
+
+vi.mock('@dnd-kit/sortable', () => ({
+  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  arrayMove: vi.fn(),
+  sortableKeyboardCoordinates: vi.fn(),
+  verticalListSortingStrategy: vi.fn(),
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    transform: null,
+    transition: null,
+    isDragging: false,
+  }),
+}));
+
+vi.mock('@dnd-kit/utilities', () => ({
+  CSS: {
+    Transform: {
+      toString: () => undefined,
+    },
+  },
+}));
+
 const mockTimer: TimerTemplate = {
   id: 'timer-123',
   name: 'Morning Routine',
@@ -113,7 +147,11 @@ describe('TimerForm', () => {
 
   it('updates total duration when step duration changes', () => {
     render(<TimerForm />);
-    fireEvent.change(screen.getByLabelText('Step 1 duration'), { target: { value: '10' } });
+    // Click the duration to open tap-to-type editor
+    fireEvent.click(screen.getByLabelText('Step 1 duration'));
+    const input = screen.getByLabelText('Step 1 duration input');
+    fireEvent.change(input, { target: { value: '10' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
     expect(screen.getByTestId('total-duration')).toHaveTextContent('10:00');
   });
 

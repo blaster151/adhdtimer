@@ -114,3 +114,67 @@ export function formatCountdown(plannedDuration: number, elapsedTime: number): s
   }
   return formatDuration(plannedDuration - elapsedTime);
 }
+
+/**
+ * Parse a user-entered duration string into seconds.
+ * Supports formats: "5m", "5:00", "5", "300s", "1h30m", "1:30:00"
+ * Returns null for invalid input or durations below 60 seconds (1 minute minimum).
+ *
+ * @example parseDuration("5m") → 300
+ * @example parseDuration("5:00") → 300
+ * @example parseDuration("5") → 300
+ * @example parseDuration("300s") → 300
+ * @example parseDuration("1h30m") → 5400
+ * @example parseDuration("abc") → null
+ * @example parseDuration("0") → null
+ */
+export function parseDuration(input: string): number | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Try "XhYm" format (e.g. "1h30m", "2h", "45m")
+  const hmMatch = trimmed.match(/^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?$/i);
+  if (hmMatch && (hmMatch[1] || hmMatch[2])) {
+    const hours = parseInt(hmMatch[1] || '0', 10);
+    const minutes = parseInt(hmMatch[2] || '0', 10);
+    const total = hours * 3600 + minutes * 60;
+    return total >= 60 ? total : null;
+  }
+
+  // Try "Xs" format (e.g. "300s")
+  const sMatch = trimmed.match(/^(\d+)\s*s$/i);
+  if (sMatch) {
+    const seconds = parseInt(sMatch[1], 10);
+    return seconds >= 60 ? seconds : null;
+  }
+
+  // Try "H:MM:SS" or "M:SS" format
+  const colonMatch = trimmed.match(/^(\d+):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (colonMatch) {
+    if (colonMatch[3] !== undefined) {
+      // H:MM:SS
+      const h = parseInt(colonMatch[1], 10);
+      const m = parseInt(colonMatch[2], 10);
+      const s = parseInt(colonMatch[3], 10);
+      if (m > 59 || s > 59) return null;
+      const total = h * 3600 + m * 60 + s;
+      return total >= 60 ? total : null;
+    } else {
+      // M:SS
+      const m = parseInt(colonMatch[1], 10);
+      const s = parseInt(colonMatch[2], 10);
+      if (s > 59) return null;
+      const total = m * 60 + s;
+      return total >= 60 ? total : null;
+    }
+  }
+
+  // Try plain number (treated as minutes)
+  const num = parseFloat(trimmed);
+  if (!isNaN(num) && num > 0 && /^\d+(\.\d+)?$/.test(trimmed)) {
+    const seconds = Math.round(num * 60);
+    return seconds >= 60 ? seconds : null;
+  }
+
+  return null;
+}

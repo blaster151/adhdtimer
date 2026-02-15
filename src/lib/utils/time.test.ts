@@ -6,6 +6,7 @@ import {
   parseDurationInput,
   formatDurationSpeech,
   formatCountdown,
+  parseDuration,
 } from './time';
 
 describe('formatDuration', () => {
@@ -193,5 +194,87 @@ describe('formatCountdown', () => {
 
   it('handles large overrun', () => {
     expect(formatCountdown(300, 3900)).toBe('+1:00:00 over');
+  });
+});
+
+describe('parseDuration', () => {
+  it('parses "5m" as 300 seconds', () => {
+    expect(parseDuration('5m')).toBe(300);
+  });
+
+  it('parses "5:00" as 300 seconds', () => {
+    expect(parseDuration('5:00')).toBe(300);
+  });
+
+  it('parses "5" as 300 seconds (plain number = minutes)', () => {
+    expect(parseDuration('5')).toBe(300);
+  });
+
+  it('parses "300s" as 300 seconds', () => {
+    expect(parseDuration('300s')).toBe(300);
+  });
+
+  it('parses "1h30m" as 5400 seconds', () => {
+    expect(parseDuration('1h30m')).toBe(5400);
+  });
+
+  it('parses "2h" as 7200 seconds', () => {
+    expect(parseDuration('2h')).toBe(7200);
+  });
+
+  it('parses "45m" as 2700 seconds', () => {
+    expect(parseDuration('45m')).toBe(2700);
+  });
+
+  it('parses "1:30:00" as 5400 seconds (H:MM:SS)', () => {
+    expect(parseDuration('1:30:00')).toBe(5400);
+  });
+
+  it('parses "10:00" as 600 seconds (M:SS)', () => {
+    expect(parseDuration('10:00')).toBe(600);
+  });
+
+  it('parses "1:00" as 60 seconds', () => {
+    expect(parseDuration('1:00')).toBe(60);
+  });
+
+  it('parses "1.5" as 90 seconds (1.5 minutes)', () => {
+    expect(parseDuration('1.5')).toBe(90);
+  });
+
+  it('returns null for empty string', () => {
+    expect(parseDuration('')).toBeNull();
+  });
+
+  it('returns null for whitespace only', () => {
+    expect(parseDuration('   ')).toBeNull();
+  });
+
+  it('returns null for "abc"', () => {
+    expect(parseDuration('abc')).toBeNull();
+  });
+
+  it('returns null for "0" (below 1 minute minimum)', () => {
+    expect(parseDuration('0')).toBeNull();
+  });
+
+  it('returns null for "0m"', () => {
+    expect(parseDuration('0m')).toBeNull();
+  });
+
+  it('returns null for "30s" (below 1 minute minimum)', () => {
+    expect(parseDuration('30s')).toBeNull();
+  });
+
+  it('returns null for "0:30" (below 1 minute)', () => {
+    expect(parseDuration('0:30')).toBeNull();
+  });
+
+  it('trims whitespace', () => {
+    expect(parseDuration('  5m  ')).toBe(300);
+  });
+
+  it('returns null for negative numbers', () => {
+    expect(parseDuration('-5')).toBeNull();
   });
 });

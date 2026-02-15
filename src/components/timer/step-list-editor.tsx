@@ -1,8 +1,25 @@
 'use client';
 
+import { useCallback } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import type { Step } from '@/types/timer';
+import { SortableStepRow } from '@/components/timer/sortable-step-row';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface StepListEditorProps {
@@ -11,6 +28,23 @@ interface StepListEditorProps {
 }
 
 export function StepListEditor({ steps, onChange }: StepListEditorProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
   function addStep() {
     const newStep: Step = {
       id: crypto.randomUUID(),
@@ -30,9 +64,24 @@ export function StepListEditor({ steps, onChange }: StepListEditorProps) {
     );
   }
 
-  function handleDurationChange(id: string, minutesStr: string) {
-    const minutes = parseFloat(minutesStr) || 0;
-    updateStep(id, 'plannedDuration', Math.round(minutes * 60));
+  const handleMove = useCallback(
+    (id: string, direction: 'up' | 'down') => {
+      const oldIndex = steps.findIndex((s) => s.id === id);
+      if (oldIndex === -1) return;
+      const newIndex = direction === 'up' ? oldIndex - 1 : oldIndex + 1;
+      if (newIndex < 0 || newIndex >= steps.length) return;
+      onChange(arrayMove(steps, oldIndex, newIndex));
+    },
+    [steps, onChange],
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = steps.findIndex((s) => s.id === active.id);
+    const newIndex = steps.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    onChange(arrayMove(steps, oldIndex, newIndex));
   }
 
   return (
@@ -50,52 +99,30 @@ export function StepListEditor({ steps, onChange }: StepListEditorProps) {
         </p>
       )}
 
-      <div className="space-y-2">
-        {steps.map((step, index) => (
-          <div
-            key={step.id}
-            className="flex items-center gap-2 rounded-md border border-border bg-surface p-2"
-          >
-            <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">
-              {index + 1}
-            </span>
-
-            <Input
-              placeholder="Step name"
-              value={step.name}
-              onChange={(e) => updateStep(step.id, 'name', e.target.value)}
-              className="flex-1"
-              aria-label={`Step ${index + 1} name`}
-              required
-            />
-
-            <div className="flex shrink-0 items-center gap-1">
-              <Input
-                type="number"
-                min={0.5}
-                step={0.5}
-                value={step.plannedDuration / 60}
-                onChange={(e) => handleDurationChange(step.id, e.target.value)}
-                className="w-20 text-center"
-                aria-label={`Step ${index + 1} duration`}
-                required
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={steps.map((s) => s.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {steps.map((step, index) => (
+              <SortableStepRow
+                key={step.id}
+                step={step}
+                index={index}
+                onUpdate={updateStep}
+                onRemove={removeStep}
+                totalSteps={steps.length}
+                onMove={handleMove}
               />
-              <span className="text-xs text-muted-foreground">min</span>
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => removeStep(step.id)}
-              aria-label={`Remove step ${index + 1}`}
-              className="shrink-0 text-muted-foreground hover:text-warning"
-            >
-              ✕
-            </Button>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
