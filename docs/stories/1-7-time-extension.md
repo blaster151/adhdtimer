@@ -1,6 +1,6 @@
 # Story 1.7: Time Extension ("I Need More Minutes")
 
-Status: ready-for-dev
+Status: complete
 
 ## Story
 
@@ -21,30 +21,30 @@ so that I can take more time without shame or friction.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Implement extend action in useTimerEngine** (AC: 30, 31, 33, extra-1, extra-2, extra-3, extra-4)
-  - [ ] Implement the `extend(seconds: number)` method in `useTimerEngine`:
+- [x] **Task 1: Implement extend action in useTimerEngine** (AC: 30, 31, 33, extra-1, extra-2, extra-3, extra-4)
+  - [x] Implement the `extend(seconds: number)` method in `useTimerEngine`:
     - Add `seconds` to `currentStep.plannedDuration`
     - Do NOT modify `currentStep.originalPlannedDuration`
     - Write updated session to Firestore via `updateSession()`
     - Update local state immediately (optimistic)
-  - [ ] Works in both `running` and `paused` states
-  - [ ] If step was about to auto-advance (elapsed ≈ planned), extension prevents the advance
-  - [ ] Multiple calls stack correctly
+  - [x] Works in both `running` and `paused` states
+  - [x] If step was about to auto-advance (elapsed ≈ planned), extension prevents the advance
+  - [x] Multiple calls stack correctly
 
-- [ ] **Task 2: Wire extension buttons in PlaybackControls** (AC: 30, 31, 32)
-  - [ ] Update `PlaybackControls` to call `extend(60)` on +1 min click and `extend(300)` on +5 min click
-  - [ ] Buttons are always enabled during active session (running or paused)
-  - [ ] No confirmation dialog — button press directly executes
-  - [ ] No judgment language anywhere (no "running over", no warnings, no color change on extension)
-  - [ ] Button labels: "+1" and "+5" (with "min" subtitle or similar)
+- [x] **Task 2: Wire extension buttons in PlaybackControls** (AC: 30, 31, 32)
+  - [x] Update `PlaybackControls` to call `extend(60)` on +1 min click and `extend(300)` on +5 min click
+  - [x] Buttons are always enabled during active session (running or paused)
+  - [x] No confirmation dialog — button press directly executes
+  - [x] No judgment language anywhere (no "running over", no warnings, no color change on extension)
+  - [x] Button labels: "+1" and "+5" (with "min" subtitle or similar)
 
-- [ ] **Task 3: Update RunningTimer display** (AC: extra-1)
-  - [ ] Ensure the planned duration display reflects the extended value
-  - [ ] If displaying "elapsed / planned", the planned portion updates live
-  - [ ] No visual indicator that the timer was extended (design principle: no shame)
+- [x] **Task 3: Update RunningTimer display** (AC: extra-1)
+  - [x] Ensure the planned duration display reflects the extended value
+  - [x] If displaying "elapsed / planned", the planned portion updates live
+  - [x] No visual indicator that the timer was extended (design principle: no shame)
 
-- [ ] **Task 4: Write extend tests** (AC: 30, 31, 33, extra-2, extra-3, extra-4)
-  - [ ] Add to `src/hooks/use-timer-engine.test.ts`:
+- [x] **Task 4: Write extend tests** (AC: 30, 31, 33, extra-2, extra-3, extra-4)
+  - [x] Add to `src/hooks/use-timer-engine.test.ts`:
     - Extend +60s → plannedDuration increases by 60
     - Extend +300s → plannedDuration increases by 300
     - originalPlannedDuration unchanged after extend
@@ -52,14 +52,14 @@ so that I can take more time without shame or friction.
     - Multiple extends stack correctly
     - Extend prevents auto-advance when elapsed was at threshold
     - Firestore updateSession called with correct data
-  - [ ] Verify all tests pass: `npm run test`
+  - [x] Verify all tests pass: `npm run test`
 
-- [ ] **Task 5: Write component tests** (AC: 30, 31, 32)
-  - [ ] Update `src/components/session/playback-controls.test.tsx`:
+- [x] **Task 5: Write component tests** (AC: 30, 31, 32)
+  - [x] Update `src/components/session/playback-controls.test.tsx`:
     - +1 min button calls extend(60)
     - +5 min button calls extend(300)
     - No confirmation dialog rendered on click
-  - [ ] Verify all tests pass
+  - [x] Verify all tests pass
 
 ## Dev Notes
 
@@ -108,11 +108,27 @@ const extend = async (seconds: number) => {
 ## Dev Agent Record
 
 ### Context Reference
+- Story 1.6 already implemented extend() in useTimerEngine and wired buttons in PlaybackControls
+- Story 1.7 focused on comprehensive test coverage and removing placeholder comment
 
 ### Agent Model Used
+Claude Opus 4.6 via GitHub Copilot
 
 ### Debug Log References
+- No issues encountered — implementation was already in place from Story 1.6
 
 ### Completion Notes List
+- extend() method was already implemented in use-timer-engine.ts (Story 1.6)
+- +1/+5 min buttons were already in playback-controls.tsx with onExtend prop (Story 1.6)
+- RunningTimer already passes engine.extend as onExtend prop (Story 1.6)
+- Added 6 new engine tests: +60s, +300s, originalPlannedDuration preserved, extend while paused, multiple extends stack, updateSession called with correct data, extend prevents auto-advance
+- Added 2 new component tests: no confirmation dialog on extend, extend buttons visible when paused
+- Removed "wired in Story 1.7" placeholder comment
+- Total: 139 tests passing, clean build
 
 ### File List
+- `src/hooks/use-timer-engine.ts` — extend() already implemented (unchanged)
+- `src/hooks/use-timer-engine.test.ts` — Added 6 new extension tests (was 12, now 18)
+- `src/components/session/playback-controls.tsx` — Removed placeholder comment
+- `src/components/session/playback-controls.test.tsx` — Added 2 new extension tests (was 9, now 11)
+- `src/components/session/running-timer.tsx` — Already displays extended plannedDuration (unchanged)

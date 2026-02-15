@@ -75,7 +75,7 @@ export function PlaybackControls({
         </Button>
       </div>
 
-      {/* Extension buttons — wired in Story 1.7 */}
+      {/* Extension buttons */}
       {onExtend && (
         <div className="flex items-center gap-2">
           <Button

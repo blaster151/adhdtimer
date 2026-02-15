@@ -282,7 +282,7 @@ describe('useTimerEngine', () => {
     expect(result.current.isCompleted).toBe(true);
   });
 
-  it('extend increases the planned duration of current step', async () => {
+  it('extend +60s increases the planned duration by 60', async () => {
     const session = makeIdleSession();
     const { result } = renderHook(() => useTimerEngine());
 
@@ -297,6 +297,151 @@ describe('useTimerEngine', () => {
     });
 
     expect(result.current.currentStep?.plannedDuration).toBe(360);
+  });
+
+  it('extend +300s increases the planned duration by 300', async () => {
+    const session = makeIdleSession();
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    await act(async () => {
+      await result.current.extend(300);
+    });
+
+    expect(result.current.currentStep?.plannedDuration).toBe(600);
+  });
+
+  it('extend preserves originalPlannedDuration', async () => {
+    const session = makeIdleSession();
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    expect(result.current.currentStep?.originalPlannedDuration).toBe(300);
+
+    await act(async () => {
+      await result.current.extend(60);
+    });
+
+    expect(result.current.currentStep?.originalPlannedDuration).toBe(300);
+
+    await act(async () => {
+      await result.current.extend(300);
+    });
+
+    expect(result.current.currentStep?.originalPlannedDuration).toBe(300);
+  });
+
+  it('extend while paused increases duration and stays paused', async () => {
+    const session = makeIdleSession();
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    await act(async () => {
+      await result.current.pause();
+    });
+
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.currentStep?.plannedDuration).toBe(300);
+
+    await act(async () => {
+      await result.current.extend(60);
+    });
+
+    expect(result.current.currentStep?.plannedDuration).toBe(360);
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.isRunning).toBe(false);
+  });
+
+  it('multiple extends stack correctly', async () => {
+    const session = makeIdleSession();
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    await act(async () => {
+      await result.current.extend(60);
+    });
+    expect(result.current.currentStep?.plannedDuration).toBe(360);
+
+    await act(async () => {
+      await result.current.extend(60);
+    });
+    expect(result.current.currentStep?.plannedDuration).toBe(420);
+
+    await act(async () => {
+      await result.current.extend(60);
+    });
+    expect(result.current.currentStep?.plannedDuration).toBe(480);
+  });
+
+  it('extend calls updateSession with updated steps', async () => {
+    const session = makeIdleSession();
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    mockUpdateSession.mockClear();
+
+    await act(async () => {
+      await result.current.extend(60);
+    });
+
+    expect(mockUpdateSession).toHaveBeenCalledOnce();
+    // The persisted steps should have the updated plannedDuration
+    const callArgs = mockUpdateSession.mock.calls[0];
+    expect(callArgs[0]).toBe('test-uid'); // userId
+    expect(callArgs[1]).toBe('session-123'); // sessionId
+    const persistedData = callArgs[2];
+    expect(persistedData.steps[0].plannedDuration).toBe(360);
+    expect(persistedData.steps[0].originalPlannedDuration).toBe(300);
+  });
+
+  it('extend prevents auto-advance when elapsed is at threshold', async () => {
+    const session = makeIdleSession();
+    // Set planned duration to 5 seconds for quick test
+    session.steps[0].plannedDuration = 5;
+    session.steps[0].originalPlannedDuration = 5;
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    // Advance time to 4 seconds (just before auto-advance)
+    mockTimestamp += 4000;
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // Extend by 60 seconds before auto-advance triggers
+    await act(async () => {
+      await result.current.extend(60);
+    });
+
+    expect(result.current.currentStep?.plannedDuration).toBe(65);
+
+    // Advance 2 more seconds — should still be running, NOT auto-advanced
+    mockTimestamp += 2000;
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.currentStepIndex).toBe(0);
+    expect(result.current.session?.steps[0].status).toBe('running');
   });
 
   it('single-step timer completes after skip', async () => {

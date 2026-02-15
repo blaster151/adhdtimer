@@ -164,4 +164,48 @@ describe('PlaybackControls', () => {
     fireEvent.click(screen.getByLabelText('Add 5 minutes'));
     expect(onExtend).toHaveBeenCalledWith(300);
   });
+
+  it('extend buttons work without confirmation dialog', () => {
+    const onExtend = vi.fn();
+    render(
+      <PlaybackControls
+        isRunning={true}
+        isPaused={false}
+        isCompleted={false}
+        isLastStep={false}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onSkip={vi.fn()}
+        onStop={vi.fn()}
+        onExtend={onExtend}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Add 1 minute'));
+    // onExtend fires immediately — no dialog rendered
+    expect(onExtend).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('extend buttons are visible when paused', () => {
+    const onExtend = vi.fn();
+    render(
+      <PlaybackControls
+        isRunning={false}
+        isPaused={true}
+        isCompleted={false}
+        isLastStep={false}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onSkip={vi.fn()}
+        onStop={vi.fn()}
+        onExtend={onExtend}
+      />,
+    );
+    expect(screen.getByLabelText('Add 1 minute')).toBeInTheDocument();
+    expect(screen.getByLabelText('Add 5 minutes')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Add 5 minutes'));
+    expect(onExtend).toHaveBeenCalledWith(300);
+  });
 });
