@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { getSession } from '@/lib/firebase/sessions';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
 import { PlaybackControls } from '@/components/session/playback-controls';
+import { TransitionOverlay } from '@/components/session/transition-overlay';
+import { calculatePace } from '@/lib/utils/pace';
 import { formatDuration } from '@/lib/utils/time';
 import type { SessionStep, StepStatus } from '@/types/session';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,6 +53,44 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   const router = useRouter();
   const { user } = useAuth();
   const engine = useTimerEngine();
+  const chimeRef = useRef<HTMLAudioElement | null>(null);
+  const [overlayVisible, setOverlayVisible] = useState(false);
+  const lastTransitionTimestamp = useRef<number>(0);
+
+  // Pre-load chime audio on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const audio = new Audio('/sounds/chime.mp3');
+      audio.volume = 0.3;
+      chimeRef.current = audio;
+    }
+  }, []);
+
+  // React to step transitions — play chime and show overlay
+  useEffect(() => {
+    if (
+      engine.lastTransition &&
+      engine.lastTransition.timestamp !== lastTransitionTimestamp.current
+    ) {
+      lastTransitionTimestamp.current = engine.lastTransition.timestamp;
+
+      // Play chime
+      if (chimeRef.current) {
+        chimeRef.current.currentTime = 0;
+        chimeRef.current.play().catch(() => {
+          /* Audio play may be blocked by browser policy — ignore silently */
+        });
+      }
+
+      // Show overlay
+      setOverlayVisible(true);
+      const timer = setTimeout(() => {
+        setOverlayVisible(false);
+        engine.clearTransition();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [engine.lastTransition, engine.clearTransition]);
 
   // Load session on mount
   useEffect(() => {
@@ -152,6 +192,25 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
           <p className="mt-1 text-sm text-muted-foreground">Redirecting to library…</p>
         </div>
       )}
+
+      {/* Transition overlay */}
+      {engine.lastTransition && (() => {
+        const pace = calculatePace(
+          session.steps,
+          session.currentStepIndex,
+          elapsedTime,
+        );
+        return (
+          <TransitionOverlay
+            stepName={engine.lastTransition.stepName}
+            stepNumber={engine.lastTransition.stepNumber}
+            totalSteps={engine.lastTransition.totalSteps}
+            paceMessage={pace.message}
+            paceStatus={pace.status}
+            visible={overlayVisible}
+          />
+        );
+      })()}
 
       {/* Playback controls */}
       <PlaybackControls

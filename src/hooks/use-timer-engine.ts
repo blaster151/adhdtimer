@@ -18,6 +18,13 @@ function getDeviceId(): string {
   return id;
 }
 
+export interface TransitionEvent {
+  stepName: string;
+  stepNumber: number;
+  totalSteps: number;
+  timestamp: number;
+}
+
 export interface UseTimerEngineReturn {
   session: RunSession | null;
   currentStep: SessionStep | null;
@@ -27,6 +34,8 @@ export interface UseTimerEngineReturn {
   isRunning: boolean;
   isPaused: boolean;
   isCompleted: boolean;
+  lastTransition: TransitionEvent | null;
+  clearTransition: () => void;
   start: (template: TimerTemplate) => Promise<void>;
   startFromSession: (existingSession: RunSession) => Promise<void>;
   pause: () => Promise<void>;
@@ -41,6 +50,7 @@ export function useTimerEngine(): UseTimerEngineReturn {
   const [session, setSession] = useState<RunSession | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [totalElapsedTime, setTotalElapsedTime] = useState(0);
+  const [lastTransition, setLastTransition] = useState<TransitionEvent | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionRef = useRef<RunSession | null>(null);
 
@@ -136,6 +146,15 @@ export function useTimerEngine(): UseTimerEngineReturn {
     setSession(updatedSession);
     setElapsedTime(0);
     setTotalElapsedTime(updatedSession.totalElapsedTime);
+
+    // Fire transition event for overlay/chime
+    setLastTransition({
+      stepName: steps[nextIdx].name,
+      stepNumber: nextIdx + 1,
+      totalSteps: steps.length,
+      timestamp: Date.now(),
+    });
+
     await persistSession(updatedSession);
     startTickRef.current?.();
   }, [clearTick, calcStepElapsed, persistSession]);
@@ -339,6 +358,10 @@ export function useTimerEngine(): UseTimerEngineReturn {
 
   const currentStep = session ? session.steps[session.currentStepIndex] ?? null : null;
 
+  const clearTransition = useCallback(() => {
+    setLastTransition(null);
+  }, []);
+
   return {
     session,
     currentStep,
@@ -348,6 +371,8 @@ export function useTimerEngine(): UseTimerEngineReturn {
     isRunning: session?.status === 'running',
     isPaused: session?.status === 'paused',
     isCompleted: session?.status === 'completed',
+    lastTransition,
+    clearTransition,
     start,
     startFromSession,
     pause,
