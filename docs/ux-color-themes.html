@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADHD Timer — Color Theme Explorer</title>
+<style>
+  /* ============================================================
+     ADHD Timer Color Theme Explorer
+     Created: 2026-02-14 | BMad Method UX Design Workflow
+     ============================================================ */
+
+  :root {
+    --explorer-bg: #0a0a0a;
+    --explorer-text: #e5e5e5;
+    --explorer-muted: #888;
+    --explorer-border: #2a2a2a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    background: var(--explorer-bg);
+    color: var(--explorer-text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ---- Header ---- */
+  .header {
+    text-align: center;
+    padding: 3rem 2rem 2rem;
+    border-bottom: 1px solid var(--explorer-border);
+  }
+  .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+  .header p { color: var(--explorer-muted); margin-top: 0.5rem; max-width: 600px; margin-inline: auto; }
+
+  /* ---- Navigation ---- */
+  .theme-nav {
+    display: flex; justify-content: center; gap: 0.5rem;
+    padding: 1.5rem 1rem; flex-wrap: wrap;
+    position: sticky; top: 0; background: var(--explorer-bg);
+    z-index: 100; border-bottom: 1px solid var(--explorer-border);
+  }
+  .theme-nav button {
+    padding: 0.6rem 1.4rem; border-radius: 999px;
+    border: 1px solid var(--explorer-border);
+    background: transparent; color: var(--explorer-text);
+    cursor: pointer; font-size: 0.9rem; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .theme-nav button:hover { border-color: #555; }
+  .theme-nav button.active {
+    background: var(--explorer-text); color: var(--explorer-bg);
+    border-color: var(--explorer-text);
+  }
+  .compare-btn {
+    background: transparent !important;
+    border: 1px dashed var(--explorer-border) !important;
+    color: var(--explorer-muted) !important;
+  }
+  .compare-btn.active {
+    background: transparent !important;
+    border: 1px dashed var(--explorer-text) !important;
+    color: var(--explorer-text) !important;
+  }
+
+  /* ---- Theme Section ---- */
+  .theme-section { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  .theme-section.visible { display: block; }
+
+  .theme-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .theme-subtitle { color: var(--explorer-muted); margin-bottom: 2rem; font-size: 1rem; }
+
+  /* ---- Palette Display ---- */
+  .palette-section { margin-bottom: 2.5rem; }
+  .palette-section h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--explorer-muted); margin-bottom: 1rem; }
+
+  .palette-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .swatch {
+    width: 80px; height: 80px; border-radius: 12px;
+    display: flex; align-items: flex-end; padding: 6px;
+    font-size: 0.65rem; font-weight: 600; color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    position: relative; cursor: default;
+    transition: transform 0.15s;
+  }
+  .swatch:hover { transform: scale(1.08); }
+  .swatch-label {
+    position: absolute; bottom: -22px; left: 0; right: 0;
+    text-align: center; font-size: 0.7rem; color: var(--explorer-muted);
+    text-shadow: none;
+  }
+  .swatch-hex {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem; opacity: 0.9;
+  }
+
+  /* ---- Component Previews ---- */
+  .components-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 2rem; margin-top: 2rem;
+  }
+
+  .component-card {
+    border: 1px solid var(--explorer-border);
+    border-radius: 16px; padding: 1.5rem;
+    background: rgba(255,255,255,0.02);
+  }
+  .component-card h4 {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--explorer-muted); margin-bottom: 1rem;
+  }
+
+  /* ---- Mock Timer Display ---- */
+  .mock-timer {
+    border-radius: 20px; padding: 2rem; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .mock-timer .step-name { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .mock-timer .time-display { font-size: 2.8rem; font-weight: 300; font-variant-numeric: tabular-nums; margin: 0.5rem 0; }
+  .mock-timer .context-msg { font-size: 0.9rem; opacity: 0.7; margin-top: 0.5rem; }
+
+  .progress-ring-container { position: relative; width: 200px; height: 200px; margin: 1rem auto; }
+  .progress-ring-container svg { transform: rotate(-90deg); }
+  .progress-ring-bg { fill: none; stroke-width: 8; }
+  .progress-ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+  .progress-ring-inner-bg { fill: none; stroke-width: 6; }
+  .progress-ring-inner-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+
+  /* ---- Mock Buttons ---- */
+  .mock-buttons { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
+  .mock-btn {
+    padding: 0.7rem 1.5rem; border-radius: 12px; border: none;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mock-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .mock-btn-secondary {
+    background: rgba(255,255,255,0.08); color: inherit;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .mock-btn-ghost {
+    background: transparent; color: inherit; opacity: 0.6;
+  }
+  .mock-btn-destructive { }
+
+  /* ---- Mock Card (Timer Library) ---- */
+  .mock-library-card {
+    border-radius: 14px; padding: 1rem 1.2rem;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.75rem; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .mock-library-card:hover { transform: translateX(4px); }
+  .mock-library-card .card-info h5 { font-size: 1rem; font-weight: 600; }
+  .mock-library-card .card-info p { font-size: 0.8rem; opacity: 0.6; }
+  .mock-library-card .card-play {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; border: none; cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .mock-library-card .card-play:hover { transform: scale(1.1); }
+
+  /* ---- Mock Toast / Transition ---- */
+  .mock-toast {
+    border-radius: 12px; padding: 0.8rem 1.2rem;
+    text-align: center; font-size: 0.9rem;
+    margin-top: 0.75rem;
+  }
+
+  /* ---- Mock Completion ---- */
+  .mock-completion { border-radius: 16px; padding: 1.5rem; text-align: center; }
+  .mock-completion .emoji { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .mock-completion .done-text { font-size: 1.3rem; font-weight: 600; }
+  .mock-completion .summary { font-size: 0.9rem; opacity: 0.7; margin-top: 0.5rem; }
+  .mock-completion .stat-row { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem; }
+  .mock-completion .stat { text-align: center; }
+  .mock-completion .stat-val { font-size: 1.4rem; font-weight: 700; }
+  .mock-completion .stat-label { font-size: 0.7rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ---- Semantic Colors Row ---- */
+  .semantic-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+  .semantic-chip {
+    padding: 0.4rem 1rem; border-radius: 8px;
+    font-size: 0.8rem; font-weight: 500;
+  }
+
+  /* ---- Compare Mode ---- */
+  .compare-grid {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem; padding: 2rem;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .compare-grid.visible { display: grid; }
+  .compare-grid .compare-card {
+    border: 1px solid var(--explorer-border);
+    border-radius: 20px; padding: 1.5rem;
+    background: rgba(255,255,255,0.02);
+  }
+  .compare-grid .compare-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .compare-grid .compare-card .sub { color: var(--explorer-muted); font-size: 0.85rem; margin-bottom: 1rem; }
+
+  @media (max-width: 768px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .components-grid { grid-template-columns: 1fr; }
+    .swatch { width: 64px; height: 64px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎨 ADHD Timer — Color Theme Explorer</h1>
+  <p>Four dark-mode-first palettes designed for calm mornings, gentle guidance, and ADHD-friendly visual clarity. Click each theme to explore, then compare side-by-side.</p>
+</div>
+
+<nav class="theme-nav">
+  <button class="active" onclick="showTheme('forest')">🌲 Deep Forest</button>
+  <button onclick="showTheme('dusk')">🌅 Warm Dusk</button>
+  <button onclick="showTheme('ocean')">🌊 Night Ocean</button>
+  <button onclick="showTheme('clay')">🏺 Soft Clay</button>
+  <button class="compare-btn" onclick="showCompare()">⚖️ Compare All</button>
+</nav>
+
+<!-- ============================================================
+     THEME 1: DEEP FOREST
+     Earthy, grounding, nature-inspired. Like a walk in the woods.
+     ============================================================ -->
+<section id="theme-forest" class="theme-section visible">
+  <h2 class="theme-title">🌲 Deep Forest</h2>
+  <p class="theme-subtitle">Earthy and grounding. A morning in a quiet forest — moss greens, warm bark, dappled light. The palette that says "you're rooted, you're safe."</p>
+
+  <div class="palette-section">
+    <h3>Background & Surface</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#0C0F0A;"><span class="swatch-hex">#0C0F0A</span><span class="swatch-label">Background</span></div>
+      <div class="swatch" style="background:#151A13;"><span class="swatch-hex">#151A13</span><span class="swatch-label">Surface</span></div>
+      <div class="swatch" style="background:#1E261B;"><span class="swatch-hex">#1E261B</span><span class="swatch-label">Elevated</span></div>
+      <div class="swatch" style="background:#2A3326;"><span class="swatch-hex">#2A3326</span><span class="swatch-label">Border</span></div>
+    </div>
+    <h3>Core Colors</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#7EBD73;"><span class="swatch-hex">#7EBD73</span><span class="swatch-label">Primary</span></div>
+      <div class="swatch" style="background:#A8C9A0;"><span class="swatch-hex">#A8C9A0</span><span class="swatch-label">Primary Soft</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Accent Warm</span></div>
+      <div class="swatch" style="background:#E8DCC8;"><span class="swatch-hex">#E8DCC8</span><span class="swatch-label">Text</span></div>
+      <div class="swatch" style="background:#8A8474;"><span class="swatch-hex">#8A8474</span><span class="swatch-label">Muted</span></div>
+    </div>
+    <h3>Semantic / Timer States</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#6BB5A0;"><span class="swatch-hex">#6BB5A0</span><span class="swatch-label">Ahead</span></div>
+      <div class="swatch" style="background:#7EBD73;"><span class="swatch-hex">#7EBD73</span><span class="swatch-label">On Track</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Behind</span></div>
+      <div class="swatch" style="background:#C47A6C;"><span class="swatch-hex">#C47A6C</span><span class="swatch-label">Warning</span></div>
+      <div class="swatch" style="background:#6B94B8;"><span class="swatch-hex">#6B94B8</span><span class="swatch-label">Info</span></div>
+    </div>
+  </div>
+
+  <div class="components-grid">
+    <!-- Running Timer -->
+    <div class="component-card">
+      <h4>Running Timer View</h4>
+      <div class="mock-timer" style="background:#151A13; color:#E8DCC8;">
+        <div class="step-name" style="color:#A8C9A0;">Shower</div>
+        <div class="progress-ring-container">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#2A3326;" />
+            <circle class="progress-ring-fill" cx="100" cy="100" r="88"
+              style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+            <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#2A3326;" />
+            <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74"
+              style="stroke:#7EBD73; stroke-dasharray:465; stroke-dashoffset:186;" />
+          </svg>
+        </div>
+        <div class="time-display" style="color:#E8DCC8;">5:23</div>
+        <div class="context-msg" style="color:#6BB5A0;">1 min ahead — nice pace</div>
+        <div class="mock-buttons">
+          <button class="mock-btn mock-btn-secondary" style="color:#E8DCC8;">⏸ Pause</button>
+          <button class="mock-btn" style="background:#7EBD73; color:#0C0F0A;">⏭ Skip</button>
+          <button class="mock-btn mock-btn-ghost" style="color:#D4A96A;">+1 min</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timer Library -->
+    <div class="component-card">
+      <h4>Timer Library</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-library-card" style="background:#1E261B; color:#E8DCC8;">
+          <div class="card-info">
+            <h5>Morning Routine</h5>
+            <p style="color:#8A8474;">5 steps · 33 min</p>
+          </div>
+          <div class="card-play" style="background:#7EBD73; color:#0C0F0A;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#1E261B; color:#E8DCC8;">
+          <div class="card-info">
+            <h5>Evening Wind-Down</h5>
+            <p style="color:#8A8474;">4 steps · 25 min</p>
+          </div>
+          <div class="card-play" style="background:#7EBD73; color:#0C0F0A;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#1E261B; color:#E8DCC8; border: 2px dashed #2A3326;">
+          <div class="card-info">
+            <h5 style="color:#8A8474;">+ Create your first timer</h5>
+            <p style="color:#8A8474;">Tap to get started</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition Toast -->
+    <div class="component-card">
+      <h4>Step Transition</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-toast" style="background:#1E261B; color:#E8DCC8;">
+          <div style="font-weight:600;">Time to start <span style="color:#A8C9A0;">Get Dressed</span></div>
+          <div style="opacity:0.6; font-size:0.8rem; margin-top:0.25rem;">Step 2 of 5 · 1 min ahead</div>
+        </div>
+        <div class="mock-toast" style="background:rgba(212,169,106,0.12); color:#D4A96A; margin-top:0.5rem;">
+          <div style="font-weight:600;">Time to start <span>Breakfast</span></div>
+          <div style="opacity:0.7; font-size:0.8rem; margin-top:0.25rem;">Step 3 of 5 · 2 min behind</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completion View -->
+    <div class="component-card">
+      <h4>Completion View</h4>
+      <div class="mock-completion" style="background:#151A13; color:#E8DCC8;">
+        <div class="emoji">☕</div>
+        <div class="done-text">Done! 38 minutes.</div>
+        <div class="summary" style="color:#6BB5A0;">3 min ahead — nice pace</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-val" style="color:#7EBD73;">5</div>
+            <div class="stat-label" style="color:#8A8474;">Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#D4A96A;">1</div>
+            <div class="stat-label" style="color:#8A8474;">Over</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#8A8474;">0</div>
+            <div class="stat-label" style="color:#8A8474;">Skipped</div>
+          </div>
+        </div>
+        <div class="mock-buttons" style="margin-top:1.5rem;">
+          <button class="mock-btn" style="background:#7EBD73; color:#0C0F0A;">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     THEME 2: WARM DUSK
+     Sunset warmth, amber glow, cozy evening light.
+     ============================================================ -->
+<section id="theme-dusk" class="theme-section">
+  <h2 class="theme-title">🌅 Warm Dusk</h2>
+  <p class="theme-subtitle">Sunset warmth. Amber lantern glow against a twilight sky. The palette that feels like a cozy blanket — safe, warm, unhurried.</p>
+
+  <div class="palette-section">
+    <h3>Background & Surface</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#110E0B;"><span class="swatch-hex">#110E0B</span><span class="swatch-label">Background</span></div>
+      <div class="swatch" style="background:#1A1512;"><span class="swatch-hex">#1A1512</span><span class="swatch-label">Surface</span></div>
+      <div class="swatch" style="background:#241E18;"><span class="swatch-hex">#241E18</span><span class="swatch-label">Elevated</span></div>
+      <div class="swatch" style="background:#332A21;"><span class="swatch-hex">#332A21</span><span class="swatch-label">Border</span></div>
+    </div>
+    <h3>Core Colors</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#E8A44E;"><span class="swatch-hex">#E8A44E</span><span class="swatch-label">Primary</span></div>
+      <div class="swatch" style="background:#D4956B;"><span class="swatch-hex">#D4956B</span><span class="swatch-label">Primary Soft</span></div>
+      <div class="swatch" style="background:#B07E5B;"><span class="swatch-hex">#B07E5B</span><span class="swatch-label">Accent</span></div>
+      <div class="swatch" style="background:#F0E6D6;"><span class="swatch-hex">#F0E6D6</span><span class="swatch-label">Text</span></div>
+      <div class="swatch" style="background:#8C7E6E;"><span class="swatch-hex">#8C7E6E</span><span class="swatch-label">Muted</span></div>
+    </div>
+    <h3>Semantic / Timer States</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#6BB5A0;"><span class="swatch-hex">#6BB5A0</span><span class="swatch-label">Ahead</span></div>
+      <div class="swatch" style="background:#E8A44E;"><span class="swatch-hex">#E8A44E</span><span class="swatch-label">On Track</span></div>
+      <div class="swatch" style="background:#D4776A;"><span class="swatch-hex">#D4776A</span><span class="swatch-label">Behind</span></div>
+      <div class="swatch" style="background:#C46A6A;"><span class="swatch-hex">#C46A6A</span><span class="swatch-label">Warning</span></div>
+      <div class="swatch" style="background:#6B94B8;"><span class="swatch-hex">#6B94B8</span><span class="swatch-label">Info</span></div>
+    </div>
+  </div>
+
+  <div class="components-grid">
+    <div class="component-card">
+      <h4>Running Timer View</h4>
+      <div class="mock-timer" style="background:#1A1512; color:#F0E6D6;">
+        <div class="step-name" style="color:#E8A44E;">Shower</div>
+        <div class="progress-ring-container">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#332A21;" />
+            <circle class="progress-ring-fill" cx="100" cy="100" r="88"
+              style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+            <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#332A21;" />
+            <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74"
+              style="stroke:#E8A44E; stroke-dasharray:465; stroke-dashoffset:186;" />
+          </svg>
+        </div>
+        <div class="time-display" style="color:#F0E6D6;">5:23</div>
+        <div class="context-msg" style="color:#6BB5A0;">1 min ahead — nice pace</div>
+        <div class="mock-buttons">
+          <button class="mock-btn mock-btn-secondary" style="color:#F0E6D6;">⏸ Pause</button>
+          <button class="mock-btn" style="background:#E8A44E; color:#110E0B;">⏭ Skip</button>
+          <button class="mock-btn mock-btn-ghost" style="color:#D4956B;">+1 min</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Timer Library</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-library-card" style="background:#241E18; color:#F0E6D6;">
+          <div class="card-info">
+            <h5>Morning Routine</h5>
+            <p style="color:#8C7E6E;">5 steps · 33 min</p>
+          </div>
+          <div class="card-play" style="background:#E8A44E; color:#110E0B;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#241E18; color:#F0E6D6;">
+          <div class="card-info">
+            <h5>Evening Wind-Down</h5>
+            <p style="color:#8C7E6E;">4 steps · 25 min</p>
+          </div>
+          <div class="card-play" style="background:#E8A44E; color:#110E0B;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#241E18; color:#F0E6D6; border: 2px dashed #332A21;">
+          <div class="card-info">
+            <h5 style="color:#8C7E6E;">+ Create your first timer</h5>
+            <p style="color:#8C7E6E;">Tap to get started</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Step Transition</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-toast" style="background:#241E18; color:#F0E6D6;">
+          <div style="font-weight:600;">Time to start <span style="color:#E8A44E;">Get Dressed</span></div>
+          <div style="opacity:0.6; font-size:0.8rem; margin-top:0.25rem;">Step 2 of 5 · 1 min ahead</div>
+        </div>
+        <div class="mock-toast" style="background:rgba(212,119,106,0.12); color:#D4776A; margin-top:0.5rem;">
+          <div style="font-weight:600;">Time to start <span>Breakfast</span></div>
+          <div style="opacity:0.7; font-size:0.8rem; margin-top:0.25rem;">Step 3 of 5 · 2 min behind</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Completion View</h4>
+      <div class="mock-completion" style="background:#1A1512; color:#F0E6D6;">
+        <div class="emoji">☕</div>
+        <div class="done-text">Done! 38 minutes.</div>
+        <div class="summary" style="color:#6BB5A0;">3 min ahead — nice pace</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-val" style="color:#E8A44E;">5</div>
+            <div class="stat-label" style="color:#8C7E6E;">Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#D4776A;">1</div>
+            <div class="stat-label" style="color:#8C7E6E;">Over</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#8C7E6E;">0</div>
+            <div class="stat-label" style="color:#8C7E6E;">Skipped</div>
+          </div>
+        </div>
+        <div class="mock-buttons" style="margin-top:1.5rem;">
+          <button class="mock-btn" style="background:#E8A44E; color:#110E0B;">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     THEME 3: NIGHT OCEAN
+     Deep sea blues, teal calm, bioluminescent accents.
+     ============================================================ -->
+<section id="theme-ocean" class="theme-section">
+  <h2 class="theme-title">🌊 Night Ocean</h2>
+  <p class="theme-subtitle">Deep and tranquil. Midnight tide with bioluminescent accents. The palette that says "breathe, float, drift through your routine."</p>
+
+  <div class="palette-section">
+    <h3>Background & Surface</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#090D11;"><span class="swatch-hex">#090D11</span><span class="swatch-label">Background</span></div>
+      <div class="swatch" style="background:#0F1820;"><span class="swatch-hex">#0F1820</span><span class="swatch-label">Surface</span></div>
+      <div class="swatch" style="background:#162230;"><span class="swatch-hex">#162230</span><span class="swatch-label">Elevated</span></div>
+      <div class="swatch" style="background:#1E2E40;"><span class="swatch-hex">#1E2E40</span><span class="swatch-label">Border</span></div>
+    </div>
+    <h3>Core Colors</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#56C4B5;"><span class="swatch-hex">#56C4B5</span><span class="swatch-label">Primary</span></div>
+      <div class="swatch" style="background:#7ED4CA;"><span class="swatch-hex">#7ED4CA</span><span class="swatch-label">Primary Soft</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Accent Warm</span></div>
+      <div class="swatch" style="background:#DEE8EC;"><span class="swatch-hex">#DEE8EC</span><span class="swatch-label">Text</span></div>
+      <div class="swatch" style="background:#6E8494;"><span class="swatch-hex">#6E8494</span><span class="swatch-label">Muted</span></div>
+    </div>
+    <h3>Semantic / Timer States</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#56C4B5;"><span class="swatch-hex">#56C4B5</span><span class="swatch-label">Ahead</span></div>
+      <div class="swatch" style="background:#7ED4CA;"><span class="swatch-hex">#7ED4CA</span><span class="swatch-label">On Track</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Behind</span></div>
+      <div class="swatch" style="background:#D47A6A;"><span class="swatch-hex">#D47A6A</span><span class="swatch-label">Warning</span></div>
+      <div class="swatch" style="background:#5B8FD4;"><span class="swatch-hex">#5B8FD4</span><span class="swatch-label">Info</span></div>
+    </div>
+  </div>
+
+  <div class="components-grid">
+    <div class="component-card">
+      <h4>Running Timer View</h4>
+      <div class="mock-timer" style="background:#0F1820; color:#DEE8EC;">
+        <div class="step-name" style="color:#7ED4CA;">Shower</div>
+        <div class="progress-ring-container">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#1E2E40;" />
+            <circle class="progress-ring-fill" cx="100" cy="100" r="88"
+              style="stroke:#56C4B5; stroke-dasharray:553; stroke-dashoffset:166;" />
+            <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#1E2E40;" />
+            <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74"
+              style="stroke:#7ED4CA; stroke-dasharray:465; stroke-dashoffset:186;" />
+          </svg>
+        </div>
+        <div class="time-display" style="color:#DEE8EC;">5:23</div>
+        <div class="context-msg" style="color:#56C4B5;">1 min ahead — nice pace</div>
+        <div class="mock-buttons">
+          <button class="mock-btn mock-btn-secondary" style="color:#DEE8EC;">⏸ Pause</button>
+          <button class="mock-btn" style="background:#56C4B5; color:#090D11;">⏭ Skip</button>
+          <button class="mock-btn mock-btn-ghost" style="color:#D4A96A;">+1 min</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Timer Library</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-library-card" style="background:#162230; color:#DEE8EC;">
+          <div class="card-info">
+            <h5>Morning Routine</h5>
+            <p style="color:#6E8494;">5 steps · 33 min</p>
+          </div>
+          <div class="card-play" style="background:#56C4B5; color:#090D11;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#162230; color:#DEE8EC;">
+          <div class="card-info">
+            <h5>Evening Wind-Down</h5>
+            <p style="color:#6E8494;">4 steps · 25 min</p>
+          </div>
+          <div class="card-play" style="background:#56C4B5; color:#090D11;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#162230; color:#DEE8EC; border: 2px dashed #1E2E40;">
+          <div class="card-info">
+            <h5 style="color:#6E8494;">+ Create your first timer</h5>
+            <p style="color:#6E8494;">Tap to get started</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Step Transition</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-toast" style="background:#162230; color:#DEE8EC;">
+          <div style="font-weight:600;">Time to start <span style="color:#7ED4CA;">Get Dressed</span></div>
+          <div style="opacity:0.6; font-size:0.8rem; margin-top:0.25rem;">Step 2 of 5 · 1 min ahead</div>
+        </div>
+        <div class="mock-toast" style="background:rgba(212,169,106,0.12); color:#D4A96A; margin-top:0.5rem;">
+          <div style="font-weight:600;">Time to start <span>Breakfast</span></div>
+          <div style="opacity:0.7; font-size:0.8rem; margin-top:0.25rem;">Step 3 of 5 · 2 min behind</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Completion View</h4>
+      <div class="mock-completion" style="background:#0F1820; color:#DEE8EC;">
+        <div class="emoji">☕</div>
+        <div class="done-text">Done! 38 minutes.</div>
+        <div class="summary" style="color:#56C4B5;">3 min ahead — nice pace</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-val" style="color:#56C4B5;">5</div>
+            <div class="stat-label" style="color:#6E8494;">Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#D4A96A;">1</div>
+            <div class="stat-label" style="color:#6E8494;">Over</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#6E8494;">0</div>
+            <div class="stat-label" style="color:#6E8494;">Skipped</div>
+          </div>
+        </div>
+        <div class="mock-buttons" style="margin-top:1.5rem;">
+          <button class="mock-btn" style="background:#56C4B5; color:#090D11;">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     THEME 4: SOFT CLAY
+     Warm neutrals, terracotta, gentle dusty rose.
+     ============================================================ -->
+<section id="theme-clay" class="theme-section">
+  <h2 class="theme-title">🏺 Soft Clay</h2>
+  <p class="theme-subtitle">Warm and tactile. Terracotta, sandstone, dusty rose. The palette that feels handmade — like pottery fresh from the kiln. Gentle and imperfect on purpose.</p>
+
+  <div class="palette-section">
+    <h3>Background & Surface</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#0F0C0A;"><span class="swatch-hex">#0F0C0A</span><span class="swatch-label">Background</span></div>
+      <div class="swatch" style="background:#1A1614;"><span class="swatch-hex">#1A1614</span><span class="swatch-label">Surface</span></div>
+      <div class="swatch" style="background:#25201C;"><span class="swatch-hex">#25201C</span><span class="swatch-label">Elevated</span></div>
+      <div class="swatch" style="background:#352E28;"><span class="swatch-hex">#352E28</span><span class="swatch-label">Border</span></div>
+    </div>
+    <h3>Core Colors</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#CC7B5C;"><span class="swatch-hex">#CC7B5C</span><span class="swatch-label">Primary</span></div>
+      <div class="swatch" style="background:#C49885;"><span class="swatch-hex">#C49885</span><span class="swatch-label">Primary Soft</span></div>
+      <div class="swatch" style="background:#B8967A;"><span class="swatch-hex">#B8967A</span><span class="swatch-label">Accent</span></div>
+      <div class="swatch" style="background:#ECE0D4;"><span class="swatch-hex">#ECE0D4</span><span class="swatch-label">Text</span></div>
+      <div class="swatch" style="background:#8A7E72;"><span class="swatch-hex">#8A7E72</span><span class="swatch-label">Muted</span></div>
+    </div>
+    <h3>Semantic / Timer States</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#6BB5A0;"><span class="swatch-hex">#6BB5A0</span><span class="swatch-label">Ahead</span></div>
+      <div class="swatch" style="background:#CC7B5C;"><span class="swatch-hex">#CC7B5C</span><span class="swatch-label">On Track</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Behind</span></div>
+      <div class="swatch" style="background:#C46A6A;"><span class="swatch-hex">#C46A6A</span><span class="swatch-label">Warning</span></div>
+      <div class="swatch" style="background:#7A9EB8;"><span class="swatch-hex">#7A9EB8</span><span class="swatch-label">Info</span></div>
+    </div>
+  </div>
+
+  <div class="components-grid">
+    <div class="component-card">
+      <h4>Running Timer View</h4>
+      <div class="mock-timer" style="background:#1A1614; color:#ECE0D4;">
+        <div class="step-name" style="color:#C49885;">Shower</div>
+        <div class="progress-ring-container">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#352E28;" />
+            <circle class="progress-ring-fill" cx="100" cy="100" r="88"
+              style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+            <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#352E28;" />
+            <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74"
+              style="stroke:#CC7B5C; stroke-dasharray:465; stroke-dashoffset:186;" />
+          </svg>
+        </div>
+        <div class="time-display" style="color:#ECE0D4;">5:23</div>
+        <div class="context-msg" style="color:#6BB5A0;">1 min ahead — nice pace</div>
+        <div class="mock-buttons">
+          <button class="mock-btn mock-btn-secondary" style="color:#ECE0D4;">⏸ Pause</button>
+          <button class="mock-btn" style="background:#CC7B5C; color:#0F0C0A;">⏭ Skip</button>
+          <button class="mock-btn mock-btn-ghost" style="color:#D4A96A;">+1 min</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Timer Library</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-library-card" style="background:#25201C; color:#ECE0D4;">
+          <div class="card-info">
+            <h5>Morning Routine</h5>
+            <p style="color:#8A7E72;">5 steps · 33 min</p>
+          </div>
+          <div class="card-play" style="background:#CC7B5C; color:#0F0C0A;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#25201C; color:#ECE0D4;">
+          <div class="card-info">
+            <h5>Evening Wind-Down</h5>
+            <p style="color:#8A7E72;">4 steps · 25 min</p>
+          </div>
+          <div class="card-play" style="background:#CC7B5C; color:#0F0C0A;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#25201C; color:#ECE0D4; border: 2px dashed #352E28;">
+          <div class="card-info">
+            <h5 style="color:#8A7E72;">+ Create your first timer</h5>
+            <p style="color:#8A7E72;">Tap to get started</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Step Transition</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-toast" style="background:#25201C; color:#ECE0D4;">
+          <div style="font-weight:600;">Time to start <span style="color:#C49885;">Get Dressed</span></div>
+          <div style="opacity:0.6; font-size:0.8rem; margin-top:0.25rem;">Step 2 of 5 · 1 min ahead</div>
+        </div>
+        <div class="mock-toast" style="background:rgba(212,169,106,0.12); color:#D4A96A; margin-top:0.5rem;">
+          <div style="font-weight:600;">Time to start <span>Breakfast</span></div>
+          <div style="opacity:0.7; font-size:0.8rem; margin-top:0.25rem;">Step 3 of 5 · 2 min behind</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Completion View</h4>
+      <div class="mock-completion" style="background:#1A1614; color:#ECE0D4;">
+        <div class="emoji">☕</div>
+        <div class="done-text">Done! 38 minutes.</div>
+        <div class="summary" style="color:#6BB5A0;">3 min ahead — nice pace</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-val" style="color:#CC7B5C;">5</div>
+            <div class="stat-label" style="color:#8A7E72;">Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#D4A96A;">1</div>
+            <div class="stat-label" style="color:#8A7E72;">Over</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#8A7E72;">0</div>
+            <div class="stat-label" style="color:#8A7E72;">Skipped</div>
+          </div>
+        </div>
+        <div class="mock-buttons" style="margin-top:1.5rem;">
+          <button class="mock-btn" style="background:#CC7B5C; color:#0F0C0A;">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     COMPARE ALL
+     ============================================================ -->
+<div id="compare-all" class="compare-grid">
+  <div class="compare-card">
+    <h3>🌲 Deep Forest</h3>
+    <div class="sub">Earthy, grounding, moss & bark</div>
+    <div class="mock-timer" style="background:#151A13; color:#E8DCC8; border-radius:16px; padding:1.5rem;">
+      <div class="step-name" style="color:#A8C9A0; font-size:1.2rem;">Shower</div>
+      <div class="progress-ring-container" style="width:140px; height:140px; margin:0.5rem auto;">
+        <svg width="140" height="140" viewBox="0 0 200 200">
+          <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#2A3326;" />
+          <circle class="progress-ring-fill" cx="100" cy="100" r="88" style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+          <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#2A3326;" />
+          <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74" style="stroke:#7EBD73; stroke-dasharray:465; stroke-dashoffset:186;" />
+        </svg>
+      </div>
+      <div class="time-display" style="font-size:2rem;">5:23</div>
+      <div class="context-msg" style="color:#6BB5A0; font-size:0.85rem;">1 min ahead</div>
+      <div style="margin-top:0.75rem;">
+        <button class="mock-btn" style="background:#7EBD73; color:#0C0F0A; padding:0.5rem 1rem; font-size:0.8rem;">▶ Play</button>
+      </div>
+    </div>
+    <div class="semantic-row" style="margin-top:1rem;">
+      <span class="semantic-chip" style="background:rgba(107,181,160,0.2); color:#6BB5A0;">Ahead</span>
+      <span class="semantic-chip" style="background:rgba(126,189,115,0.2); color:#7EBD73;">On Track</span>
+      <span class="semantic-chip" style="background:rgba(212,169,106,0.2); color:#D4A96A;">Behind</span>
+    </div>
+  </div>
+
+  <div class="compare-card">
+    <h3>🌅 Warm Dusk</h3>
+    <div class="sub">Sunset amber, lantern glow, cozy</div>
+    <div class="mock-timer" style="background:#1A1512; color:#F0E6D6; border-radius:16px; padding:1.5rem;">
+      <div class="step-name" style="color:#E8A44E; font-size:1.2rem;">Shower</div>
+      <div class="progress-ring-container" style="width:140px; height:140px; margin:0.5rem auto;">
+        <svg width="140" height="140" viewBox="0 0 200 200">
+          <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#332A21;" />
+          <circle class="progress-ring-fill" cx="100" cy="100" r="88" style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+          <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#332A21;" />
+          <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74" style="stroke:#E8A44E; stroke-dasharray:465; stroke-dashoffset:186;" />
+        </svg>
+      </div>
+      <div class="time-display" style="font-size:2rem;">5:23</div>
+      <div class="context-msg" style="color:#6BB5A0; font-size:0.85rem;">1 min ahead</div>
+      <div style="margin-top:0.75rem;">
+        <button class="mock-btn" style="background:#E8A44E; color:#110E0B; padding:0.5rem 1rem; font-size:0.8rem;">▶ Play</button>
+      </div>
+    </div>
+    <div class="semantic-row" style="margin-top:1rem;">
+      <span class="semantic-chip" style="background:rgba(107,181,160,0.2); color:#6BB5A0;">Ahead</span>
+      <span class="semantic-chip" style="background:rgba(232,164,78,0.2); color:#E8A44E;">On Track</span>
+      <span class="semantic-chip" style="background:rgba(212,119,106,0.2); color:#D4776A;">Behind</span>
+    </div>
+  </div>
+
+  <div class="compare-card">
+    <h3>🌊 Night Ocean</h3>
+    <div class="sub">Deep sea, teal calm, bioluminescent</div>
+    <div class="mock-timer" style="background:#0F1820; color:#DEE8EC; border-radius:16px; padding:1.5rem;">
+      <div class="step-name" style="color:#7ED4CA; font-size:1.2rem;">Shower</div>
+      <div class="progress-ring-container" style="width:140px; height:140px; margin:0.5rem auto;">
+        <svg width="140" height="140" viewBox="0 0 200 200">
+          <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#1E2E40;" />
+          <circle class="progress-ring-fill" cx="100" cy="100" r="88" style="stroke:#56C4B5; stroke-dasharray:553; stroke-dashoffset:166;" />
+          <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#1E2E40;" />
+          <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74" style="stroke:#7ED4CA; stroke-dasharray:465; stroke-dashoffset:186;" />
+        </svg>
+      </div>
+      <div class="time-display" style="font-size:2rem;">5:23</div>
+      <div class="context-msg" style="color:#56C4B5; font-size:0.85rem;">1 min ahead</div>
+      <div style="margin-top:0.75rem;">
+        <button class="mock-btn" style="background:#56C4B5; color:#090D11; padding:0.5rem 1rem; font-size:0.8rem;">▶ Play</button>
+      </div>
+    </div>
+    <div class="semantic-row" style="margin-top:1rem;">
+      <span class="semantic-chip" style="background:rgba(86,196,181,0.2); color:#56C4B5;">Ahead</span>
+      <span class="semantic-chip" style="background:rgba(126,212,202,0.2); color:#7ED4CA;">On Track</span>
+      <span class="semantic-chip" style="background:rgba(212,169,106,0.2); color:#D4A96A;">Behind</span>
+    </div>
+  </div>
+
+  <div class="compare-card">
+    <h3>🏺 Soft Clay</h3>
+    <div class="sub">Terracotta, sandstone, dusty rose</div>
+    <div class="mock-timer" style="background:#1A1614; color:#ECE0D4; border-radius:16px; padding:1.5rem;">
+      <div class="step-name" style="color:#C49885; font-size:1.2rem;">Shower</div>
+      <div class="progress-ring-container" style="width:140px; height:140px; margin:0.5rem auto;">
+        <svg width="140" height="140" viewBox="0 0 200 200">
+          <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#352E28;" />
+          <circle class="progress-ring-fill" cx="100" cy="100" r="88" style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+          <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#352E28;" />
+          <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74" style="stroke:#CC7B5C; stroke-dasharray:465; stroke-dashoffset:186;" />
+        </svg>
+      </div>
+      <div class="time-display" style="font-size:2rem;">5:23</div>
+      <div class="context-msg" style="color:#6BB5A0; font-size:0.85rem;">1 min ahead</div>
+      <div style="margin-top:0.75rem;">
+        <button class="mock-btn" style="background:#CC7B5C; color:#0F0C0A; padding:0.5rem 1rem; font-size:0.8rem;">▶ Play</button>
+      </div>
+    </div>
+    <div class="semantic-row" style="margin-top:1rem;">
+      <span class="semantic-chip" style="background:rgba(107,181,160,0.2); color:#6BB5A0;">Ahead</span>
+      <span class="semantic-chip" style="background:rgba(204,123,92,0.2); color:#CC7B5C;">On Track</span>
+      <span class="semantic-chip" style="background:rgba(212,169,106,0.2); color:#D4A96A;">Behind</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTheme(id) {
+    // Hide all
+    document.querySelectorAll('.theme-section').forEach(s => s.classList.remove('visible'));
+    document.getElementById('compare-all').classList.remove('visible');
+
+    // Show selected
+    document.getElementById('theme-' + id).classList.add('visible');
+
+    // Update nav
+    document.querySelectorAll('.theme-nav button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  function showCompare() {
+    document.querySelectorAll('.theme-section').forEach(s => s.classList.remove('visible'));
+    document.getElementById('compare-all').classList.add('visible');
+
+    document.querySelectorAll('.theme-nav button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+</script>
+
+</body>
+</html>

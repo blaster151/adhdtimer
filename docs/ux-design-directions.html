@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADHD Timer — Design Direction Mockups</title>
+<style>
+  /* ============================================================
+     ADHD Timer Design Direction Showcase
+     Theme: Deep Forest 🌲
+     Created: 2026-02-14 | BMad Method UX Design Workflow
+     ============================================================ */
+
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    /* Deep Forest palette */
+    --bg: #0C0F0A;
+    --surface: #151A13;
+    --elevated: #1E261B;
+    --border: #2A3326;
+    --primary: #7EBD73;
+    --primary-soft: #A8C9A0;
+    --accent-warm: #D4A96A;
+    --text: #E8DCC8;
+    --muted: #8A8474;
+    --ahead: #6BB5A0;
+    --on-track: #7EBD73;
+    --behind: #D4A96A;
+    --warning: #C47A6C;
+    --info: #6B94B8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #050505;
+    color: #e5e5e5;
+    line-height: 1.5;
+  }
+
+  /* ---- Header ---- */
+  .header {
+    text-align: center;
+    padding: 3rem 2rem 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+  .header .tag { display: inline-block; background: rgba(126,189,115,0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem; }
+  .header p { color: #888; margin-top: 0.75rem; max-width: 700px; margin-inline: auto; font-size: 0.95rem; }
+
+  /* ---- Navigation ---- */
+  .dir-nav {
+    display: flex; justify-content: center; gap: 0.4rem;
+    padding: 1.25rem 1rem; flex-wrap: wrap;
+    position: sticky; top: 0; background: #050505;
+    z-index: 100; border-bottom: 1px solid #1a1a1a;
+  }
+  .dir-nav button {
+    padding: 0.5rem 1rem; border-radius: 10px;
+    border: 1px solid #222;
+    background: transparent; color: #ccc;
+    cursor: pointer; font-size: 0.8rem; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .dir-nav button:hover { border-color: #444; background: #111; }
+  .dir-nav button.active {
+    background: var(--primary); color: var(--bg);
+    border-color: var(--primary); font-weight: 700;
+  }
+
+  /* ---- Direction Section ---- */
+  .direction { display: none; padding: 2rem 1rem; max-width: 1300px; margin: 0 auto; }
+  .direction.visible { display: block; }
+
+  .dir-header { text-align: center; margin-bottom: 2.5rem; }
+  .dir-header h2 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.01em; }
+  .dir-header .philosophy { color: #888; font-size: 1rem; margin-top: 0.5rem; max-width: 600px; margin-inline: auto; }
+  .dir-header .traits { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+  .dir-header .trait {
+    padding: 0.3rem 0.8rem; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600;
+    background: rgba(255,255,255,0.05); color: #aaa;
+    border: 1px solid #222;
+  }
+
+  /* ---- Phone Frame ---- */
+  .screens-row {
+    display: flex; justify-content: center; gap: 2rem;
+    flex-wrap: wrap; margin-top: 2rem;
+  }
+  .screen-container { text-align: center; }
+  .screen-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #666; margin-bottom: 0.75rem; }
+
+  .phone-frame {
+    width: 375px; height: 720px;
+    border-radius: 40px;
+    border: 3px solid #2a2a2a;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .phone-frame .status-bar {
+    height: 48px; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 24px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .phone-frame .status-bar .time { }
+  .phone-frame .status-bar .icons { display: flex; gap: 4px; font-size: 0.65rem; }
+
+  /* ---- Reusable within phone ---- */
+  .p-full { height: 100%; display: flex; flex-direction: column; }
+  .p-center { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 1rem; }
+  .p-bottom { padding: 1.5rem; }
+
+  /* ---- Direction-specific content styles are inline for clarity ---- */
+
+  /* ---- Responsive ---- */
+  @media (max-width: 768px) {
+    .phone-frame { width: 340px; height: 660px; }
+    .screens-row { gap: 1.5rem; }
+    .dir-nav button { font-size: 0.7rem; padding: 0.4rem 0.8rem; }
+  }
+
+  /* ---- Animations ---- */
+  @keyframes breathe {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  @keyframes spin {
+    from { transform: rotate(-90deg); }
+    to { transform: rotate(270deg); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .anim-breathe { animation: breathe 3s ease-in-out infinite; }
+  .anim-fade-up { animation: fadeUp 0.5s ease-out; }
+
+  /* Ring helper */
+  .ring-svg { transform: rotate(-90deg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ADHD Timer — Design Directions</h1>
+  <span class="tag">🌲 Deep Forest Theme</span>
+  <p>8 different design approaches for the core running timer screen. Each has a unique philosophy about density, typography, interaction, and emotional impact. All use the Deep Forest palette.</p>
+</div>
+
+<nav class="dir-nav">
+  <button class="active" onclick="show('d1',this)">1. Zen Ring</button>
+  <button onclick="show('d2',this)">2. Bold Companion</button>
+  <button onclick="show('d3',this)">3. Minimal Pulse</button>
+  <button onclick="show('d4',this)">4. Dashboard</button>
+  <button onclick="show('d5',this)">5. Card Stack</button>
+  <button onclick="show('d6',this)">6. Full Bleed</button>
+  <button onclick="show('d7',this)">7. Soft Focus</button>
+  <button onclick="show('d8',this)">8. Terminal</button>
+</nav>
+
+<!-- ============================================================
+     DIRECTION 1: ZEN RING
+     Concentric rings dominate. Minimal text. Maximum calm.
+     ============================================================ -->
+<section id="d1" class="direction visible">
+  <div class="dir-header">
+    <h2>1. Zen Ring</h2>
+    <p class="philosophy">The concentric progress ring IS the app. Everything else whispers. Maximum calm, minimum cognitive load. Inspired by IntervalTimer's bold simplicity.</p>
+    <div class="traits">
+      <span class="trait">Ultra Minimal</span>
+      <span class="trait">Ring-Centric</span>
+      <span class="trait">Breath-Like Pacing</span>
+      <span class="trait">Least Text</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <!-- Running Timer -->
+    <div class="screen-container">
+      <div class="screen-label">Running Timer</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center">
+            <!-- Concentric rings -->
+            <svg class="ring-svg" width="260" height="260" viewBox="0 0 260 260">
+              <!-- Outer ring (total progress) -->
+              <circle cx="130" cy="130" r="120" fill="none" stroke="var(--border)" stroke-width="10" />
+              <circle cx="130" cy="130" r="120" fill="none" stroke="var(--ahead)" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="754" stroke-dashoffset="226" />
+              <!-- Inner ring (step progress) -->
+              <circle cx="130" cy="130" r="100" fill="none" stroke="var(--border)" stroke-width="8" />
+              <circle cx="130" cy="130" r="100" fill="none" stroke="var(--primary)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="628" stroke-dashoffset="251" />
+              <!-- Center text -->
+              <text x="130" y="110" text-anchor="middle" fill="var(--primary-soft)" font-family="Inter" font-size="18" font-weight="500" transform="rotate(90,130,130)">Shower</text>
+              <text x="130" y="148" text-anchor="middle" fill="var(--text)" font-family="Inter" font-size="42" font-weight="300" transform="rotate(90,130,130)">5:23</text>
+              <text x="130" y="174" text-anchor="middle" fill="var(--ahead)" font-family="Inter" font-size="13" font-weight="400" class="anim-breathe" transform="rotate(90,130,130)">1 min ahead</text>
+            </svg>
+
+            <!-- Step indicator dots -->
+            <div style="display:flex; gap:8px; margin-top:2rem;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);opacity:0.4;"></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);"></div>
+              <div style="width:10px;height:10px;border-radius:50%;border:2px solid var(--primary);background:transparent;"></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--border);"></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--border);"></div>
+            </div>
+          </div>
+
+          <div class="p-bottom" style="display:flex; justify-content:center; gap:1rem; padding-bottom:3rem;">
+            <button style="width:52px;height:52px;border-radius:50%;background:var(--elevated);border:1px solid var(--border);color:var(--text);font-size:1.2rem;cursor:pointer;">⏸</button>
+            <button style="width:52px;height:52px;border-radius:50%;background:var(--primary);border:none;color:var(--bg);font-size:1.2rem;cursor:pointer;font-weight:700;">⏭</button>
+            <button style="width:52px;height:52px;border-radius:50%;background:var(--elevated);border:1px solid var(--border);color:var(--accent-warm);font-size:0.75rem;cursor:pointer;font-weight:600;">+1m</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timer Library -->
+    <div class="screen-container">
+      <div class="screen-label">Timer Library</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div style="padding: 0 20px;">
+          <div style="margin-top:8px; margin-bottom:24px;">
+            <div style="font-size:0.8rem; color:var(--muted); margin-bottom:4px;">Good morning, BMad</div>
+            <div style="font-size:1.6rem; font-weight:700; color:var(--text);">My Timers</div>
+          </div>
+
+          <!-- Timer Cards -->
+          <div style="background:var(--surface);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:1rem;font-weight:600;color:var(--text);">Morning Routine</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">5 steps · 33 min</div>
+            </div>
+            <div style="width:48px;height:48px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:1.3rem;cursor:pointer;">▶</div>
+          </div>
+
+          <div style="background:var(--surface);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:1rem;font-weight:600;color:var(--text);">Evening Wind-Down</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">4 steps · 25 min</div>
+            </div>
+            <div style="width:48px;height:48px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:1.3rem;cursor:pointer;">▶</div>
+          </div>
+
+          <div style="background:var(--surface);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:1rem;font-weight:600;color:var(--text);">Quick Clean Kitchen</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">6 steps · 20 min</div>
+            </div>
+            <div style="width:48px;height:48px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:1.3rem;cursor:pointer;">▶</div>
+          </div>
+
+          <!-- Create button -->
+          <div style="background:var(--elevated);border:2px dashed var(--border);border-radius:16px;padding:20px;text-align:center;margin-top:16px;cursor:pointer;">
+            <div style="font-size:1.5rem;margin-bottom:4px;">+</div>
+            <div style="font-size:0.9rem;color:var(--muted);">Create new timer</div>
+          </div>
+
+          <!-- AI shortcut -->
+          <div style="background:linear-gradient(135deg, rgba(126,189,115,0.08), rgba(212,169,106,0.08));border:1px solid var(--border);border-radius:16px;padding:16px;text-align:center;margin-top:12px;cursor:pointer;">
+            <div style="font-size:0.9rem;color:var(--primary-soft);">✨ Break down a task with AI</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 2: BOLD COMPANION
+     Step name is HUGE. Voice-forward. The screen feels like it's talking to you.
+     ============================================================ -->
+<section id="d2" class="direction">
+  <div class="dir-header">
+    <h2>2. Bold Companion</h2>
+    <p class="philosophy">The step name dominates the screen in giant type. The app "speaks" through the screen just like it speaks through TTS. The time is secondary — the instruction is primary. DoorDash's "your order is being prepared" confidence.</p>
+    <div class="traits">
+      <span class="trait">Giant Typography</span>
+      <span class="trait">Voice-Forward</span>
+      <span class="trait">Instruction > Time</span>
+      <span class="trait">Companion Feel</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <!-- Progress bar at top -->
+          <div style="padding:0 20px;margin-top:8px;">
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:40%;background:var(--primary);border-radius:2px;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.7rem;color:var(--muted);">
+              <span>Step 2 of 5</span>
+              <span>40% done</span>
+            </div>
+          </div>
+
+          <div class="p-center" style="padding:2rem 1.5rem;">
+            <!-- Giant step name -->
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:3.2rem;font-weight:700;color:var(--text);line-height:1.1;text-align:center;margin-bottom:1rem;">
+              Shower
+            </div>
+
+            <!-- Time -->
+            <div style="font-size:4rem;font-weight:200;color:var(--primary-soft);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;">
+              5:23
+            </div>
+
+            <!-- Context -->
+            <div style="margin-top:1rem;background:rgba(107,181,160,0.1);padding:0.5rem 1rem;border-radius:10px;">
+              <span style="color:var(--ahead);font-size:0.9rem;font-weight:500;">1 min ahead — nice pace</span>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="p-bottom" style="display:flex;gap:12px;padding:20px 24px 40px;">
+            <button style="flex:1;padding:16px;border-radius:14px;background:var(--elevated);border:1px solid var(--border);color:var(--text);font-size:1rem;cursor:pointer;font-weight:500;">⏸ Pause</button>
+            <button style="flex:1;padding:16px;border-radius:14px;background:var(--primary);border:none;color:var(--bg);font-size:1rem;cursor:pointer;font-weight:700;">⏭ Next Step</button>
+          </div>
+          <div style="text-align:center;padding-bottom:2rem;">
+            <button style="background:none;border:none;color:var(--accent-warm);font-size:0.85rem;cursor:pointer;font-weight:500;">+ I need more time</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Step Transition Overlay</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center" style="background:linear-gradient(180deg, var(--bg) 0%, rgba(30,38,27,0.8) 100%);">
+            <!-- Chime indicator -->
+            <div style="width:80px;height:80px;border-radius:50%;background:rgba(126,189,115,0.1);border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:2rem;" class="anim-breathe">
+              🔔
+            </div>
+
+            <div style="font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Next Up</div>
+
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:2.8rem;font-weight:700;color:var(--text);text-align:center;line-height:1.1;">
+              Get Dressed
+            </div>
+
+            <div style="font-size:1.1rem;color:var(--primary-soft);margin-top:0.75rem;">5 minutes</div>
+
+            <div style="margin-top:2rem;background:rgba(107,181,160,0.1);padding:0.6rem 1.2rem;border-radius:10px;">
+              <span style="color:var(--ahead);font-size:0.9rem;">You're 1 min ahead — nice pace</span>
+            </div>
+
+            <div style="margin-top:3rem;font-size:0.75rem;color:var(--muted);">Step 3 of 5 · 15 min remaining</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 3: MINIMAL PULSE
+     Almost nothing on screen. A breathing dot and time. Pure calm.
+     ============================================================ -->
+<section id="d3" class="direction">
+  <div class="dir-header">
+    <h2>3. Minimal Pulse</h2>
+    <p class="philosophy">Radically minimal. A breathing pulse of color, the step name, the time. Nothing else until you need it — tap to reveal controls. The app disappears, leaving only presence. "Digital body double" taken literally.</p>
+    <div class="traits">
+      <span class="trait">Radical Minimalism</span>
+      <span class="trait">Tap-to-Reveal Controls</span>
+      <span class="trait">Breathing Animation</span>
+      <span class="trait">Body Double Vibe</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer (Default)</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center">
+            <!-- Breathing circle -->
+            <div style="width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, rgba(126,189,115,0.15) 0%, transparent 70%);display:flex;align-items:center;justify-content:center;" class="anim-breathe">
+              <div style="width:120px;height:120px;border-radius:50%;background:radial-gradient(circle, rgba(126,189,115,0.25) 0%, transparent 70%);display:flex;align-items:center;justify-content:center;">
+                <div style="width:12px;height:12px;border-radius:50%;background:var(--primary);"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:3rem;font-size:1.3rem;color:var(--primary-soft);font-weight:500;text-align:center;">Shower</div>
+            <div style="font-size:3rem;font-weight:200;color:var(--text);margin-top:0.5rem;font-variant-numeric:tabular-nums;">5:23</div>
+            <div style="font-size:0.85rem;color:var(--ahead);margin-top:1rem;" class="anim-breathe">1 min ahead</div>
+          </div>
+
+          <!-- Hint to tap -->
+          <div style="text-align:center;padding-bottom:3rem;color:var(--muted);font-size:0.7rem;">
+            tap for controls
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Running Timer (Controls Revealed)</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center">
+            <div style="width:100px;height:100px;border-radius:50%;background:radial-gradient(circle, rgba(126,189,115,0.2) 0%, transparent 70%);display:flex;align-items:center;justify-content:center;" class="anim-breathe">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);"></div>
+            </div>
+
+            <div style="margin-top:2rem;font-size:1.1rem;color:var(--primary-soft);font-weight:500;">Shower</div>
+            <div style="font-size:2.5rem;font-weight:200;color:var(--text);margin-top:0.25rem;font-variant-numeric:tabular-nums;">5:23</div>
+            <div style="font-size:0.85rem;color:var(--ahead);margin-top:0.5rem;">1 min ahead</div>
+          </div>
+
+          <!-- Step list peek -->
+          <div style="padding:0 20px 12px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--muted);"></div>
+              <span style="font-size:0.8rem;color:var(--muted);text-decoration:line-through;">Wake up</span>
+              <span style="margin-left:auto;font-size:0.75rem;color:var(--muted);">3:12</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);"></div>
+              <span style="font-size:0.85rem;color:var(--text);font-weight:600;">Shower</span>
+              <span style="margin-left:auto;font-size:0.75rem;color:var(--primary);">5:23 / 8:00</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--border);"></div>
+              <span style="font-size:0.8rem;color:var(--muted);">Get dressed</span>
+              <span style="margin-left:auto;font-size:0.75rem;color:var(--muted);">5:00</span>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div style="display:flex;gap:10px;padding:12px 20px 36px;">
+            <button style="flex:1;padding:14px;border-radius:14px;background:var(--elevated);border:1px solid var(--border);color:var(--text);font-size:0.9rem;cursor:pointer;">⏸</button>
+            <button style="flex:1;padding:14px;border-radius:14px;background:var(--primary);border:none;color:var(--bg);font-size:0.9rem;cursor:pointer;font-weight:600;">⏭ Skip</button>
+            <button style="flex:1;padding:14px;border-radius:14px;background:var(--elevated);border:1px solid var(--border);color:var(--accent-warm);font-size:0.9rem;cursor:pointer;">+1m</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 4: DASHBOARD
+     More info density. Step list visible. Time + progress at top.
+     ============================================================ -->
+<section id="d4" class="direction">
+  <div class="dir-header">
+    <h2>4. Info Dashboard</h2>
+    <p class="philosophy">For people who want to SEE everything. Step list always visible with progress. Current step prominent at top. DoorDash's tracking detail meets IntervalTimer's clarity. More cognitive load, more orientation.</p>
+    <div class="traits">
+      <span class="trait">High Info Density</span>
+      <span class="trait">Step List Visible</span>
+      <span class="trait">DoorDash Tracker</span>
+      <span class="trait">Full Context</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <!-- Current step hero -->
+          <div style="background:var(--surface);padding:20px;margin:0 16px;border-radius:16px;margin-top:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Step 2 of 5</div>
+                <div style="font-size:1.4rem;font-weight:700;color:var(--text);margin-top:4px;">Shower</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:2rem;font-weight:300;color:var(--text);font-variant-numeric:tabular-nums;">5:23</div>
+                <div style="font-size:0.75rem;color:var(--muted);">of 8:00</div>
+              </div>
+            </div>
+            <!-- Step progress bar -->
+            <div style="margin-top:12px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:66%;background:var(--primary);border-radius:3px;"></div>
+            </div>
+            <div style="margin-top:8px;text-align:center;">
+              <span style="font-size:0.8rem;color:var(--ahead);">1 min ahead — nice pace</span>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div style="display:flex;gap:8px;padding:12px 16px;">
+            <button style="flex:1;padding:12px;border-radius:12px;background:var(--elevated);border:1px solid var(--border);color:var(--text);font-size:0.85rem;cursor:pointer;">⏸ Pause</button>
+            <button style="flex:1;padding:12px;border-radius:12px;background:var(--primary);border:none;color:var(--bg);font-size:0.85rem;cursor:pointer;font-weight:600;">⏭ Skip</button>
+            <button style="padding:12px 16px;border-radius:12px;background:var(--elevated);border:1px solid var(--border);color:var(--accent-warm);font-size:0.85rem;cursor:pointer;">+1m</button>
+          </div>
+
+          <!-- Step list -->
+          <div style="flex:1;overflow-y:auto;padding:0 16px 16px;">
+            <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;margin-top:4px;">All Steps</div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border-radius:10px;margin-bottom:6px;opacity:0.5;">
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--bg);">✓</div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;color:var(--text);text-decoration:line-through;">Wake up</div>
+              </div>
+              <div style="font-size:0.75rem;color:var(--muted);">3:12</div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(126,189,115,0.08);border:1px solid var(--primary);border-radius:10px;margin-bottom:6px;">
+              <div style="width:24px;height:24px;border-radius:50%;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);"></div>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;color:var(--text);font-weight:600;">Shower</div>
+              </div>
+              <div style="font-size:0.75rem;color:var(--primary);">5:23</div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border-radius:10px;margin-bottom:6px;">
+              <div style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);"></div>
+              <div style="flex:1;"><div style="font-size:0.85rem;color:var(--muted);">Get dressed</div></div>
+              <div style="font-size:0.75rem;color:var(--muted);">5:00</div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border-radius:10px;margin-bottom:6px;">
+              <div style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);"></div>
+              <div style="flex:1;"><div style="font-size:0.85rem;color:var(--muted);">Breakfast</div></div>
+              <div style="font-size:0.75rem;color:var(--muted);">12:00</div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border-radius:10px;">
+              <div style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);"></div>
+              <div style="flex:1;"><div style="font-size:0.85rem;color:var(--muted);">Brush teeth</div></div>
+              <div style="font-size:0.75rem;color:var(--muted);">3:00</div>
+            </div>
+          </div>
+
+          <!-- Total progress -->
+          <div style="padding:12px 16px 28px;border-top:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:4px;">
+              <span>Total progress</span>
+              <span>12:35 / 33:00</span>
+            </div>
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:38%;background:var(--ahead);border-radius:2px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Completion View</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">7:18 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center" style="padding:2rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">☕</div>
+            <div style="font-size:1.8rem;font-weight:700;color:var(--text);">Done!</div>
+            <div style="font-size:1rem;color:var(--primary-soft);margin-top:0.25rem;">38 minutes · Morning Routine</div>
+            <div style="margin-top:1rem;background:rgba(107,181,160,0.1);padding:0.5rem 1rem;border-radius:10px;">
+              <span style="color:var(--ahead);font-size:0.9rem;">3 min ahead — nice pace</span>
+            </div>
+
+            <!-- Stats -->
+            <div style="display:flex;gap:2rem;margin-top:2rem;">
+              <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:var(--primary);">5</div>
+                <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Done</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:var(--accent-warm);">1</div>
+                <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Over</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:var(--muted);">0</div>
+                <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Skipped</div>
+              </div>
+            </div>
+
+            <!-- Step breakdown -->
+            <div style="width:100%;margin-top:2rem;text-align:left;">
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem;">
+                <span style="color:var(--text);">Shower</span>
+                <span style="color:var(--accent-warm);">10 min <span style="color:var(--muted);">(planned 8)</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem;">
+                <span style="color:var(--text);">Get dressed</span>
+                <span style="color:var(--primary);">4 min <span style="color:var(--muted);">(planned 5)</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem;">
+                <span style="color:var(--text);">Breakfast</span>
+                <span style="color:var(--text);">12 min</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem;">
+                <span style="color:var(--text);">Brush teeth</span>
+                <span style="color:var(--text);">3 min</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.8rem;">
+                <span style="color:var(--text);">Pack bag</span>
+                <span style="color:var(--primary);">4 min <span style="color:var(--muted);">(planned 5)</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:16px 24px 36px;">
+            <button style="width:100%;padding:16px;border-radius:14px;background:var(--primary);border:none;color:var(--bg);font-size:1rem;cursor:pointer;font-weight:700;">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 5: CARD STACK
+     Current step is a floating card. Upcoming steps peek from below.
+     ============================================================ -->
+<section id="d5" class="direction">
+  <div class="dir-header">
+    <h2>5. Card Stack</h2>
+    <p class="philosophy">Each step is a card. The current step floats prominently. Upcoming steps peek from below like a deck. Completing a step "plays" the card — swipe or auto-advance. Tangible, tactile, playful.</p>
+    <div class="traits">
+      <span class="trait">Card Metaphor</span>
+      <span class="trait">Stacked Depth</span>
+      <span class="trait">Swipe Forward</span>
+      <span class="trait">Playful + Clear</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <!-- Top bar -->
+          <div style="padding:8px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:0.9rem;color:var(--text);font-weight:600;">Morning Routine</div>
+            <div style="font-size:0.75rem;color:var(--muted);">12:35 / 33:00</div>
+          </div>
+          <div style="padding:0 20px;"><div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;"><div style="height:100%;width:38%;background:var(--ahead);border-radius:2px;"></div></div></div>
+
+          <div style="flex:1;position:relative;padding:24px 16px;">
+            <!-- Background cards (upcoming) -->
+            <div style="position:absolute;left:24px;right:24px;top:180px;height:120px;background:var(--surface);border-radius:16px;opacity:0.3;transform:scale(0.92);"></div>
+            <div style="position:absolute;left:20px;right:20px;top:160px;height:120px;background:var(--surface);border-radius:16px;opacity:0.5;transform:scale(0.96);"></div>
+
+            <!-- Current step card -->
+            <div style="background:var(--surface);border-radius:20px;padding:28px;position:relative;z-index:2;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+              <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Step 2 of 5</div>
+              <div style="font-size:1.8rem;font-weight:700;color:var(--text);margin-top:8px;">Shower</div>
+
+              <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px;">
+                <span style="font-size:3rem;font-weight:200;color:var(--text);font-variant-numeric:tabular-nums;">5:23</span>
+                <span style="font-size:1rem;color:var(--muted);">/ 8:00</span>
+              </div>
+
+              <!-- Mini ring -->
+              <div style="margin-top:12px;">
+                <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+                  <div style="height:100%;width:66%;background:var(--primary);border-radius:3px;"></div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;color:var(--ahead);font-size:0.85rem;">1 min ahead — nice pace</div>
+            </div>
+
+            <!-- Peek labels -->
+            <div style="position:relative;z-index:1;margin-top:20px;padding:0 8px;">
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);padding:4px 0;">
+                <span>Next: Get dressed</span><span>5:00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);padding:4px 0;opacity:0.5;">
+                <span>Then: Breakfast</span><span>12:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div style="display:flex;gap:10px;padding:12px 20px 36px;">
+            <button style="flex:1;padding:14px;border-radius:14px;background:var(--elevated);border:1px solid var(--border);color:var(--text);font-size:0.9rem;cursor:pointer;">⏸ Pause</button>
+            <button style="flex:2;padding:14px;border-radius:14px;background:var(--primary);border:none;color:var(--bg);font-size:0.9rem;cursor:pointer;font-weight:700;">⏭ Next Step</button>
+            <button style="padding:14px;border-radius:14px;background:var(--elevated);border:1px solid var(--border);color:var(--accent-warm);font-size:0.85rem;cursor:pointer;">+1m</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Timer Creation (AI)</div>
+      <div class="phone-frame" style="background: var(--bg);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">8:15 PM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div style="padding:16px 20px;">
+          <div style="font-size:1.4rem;font-weight:700;color:var(--text);margin-top:8px;">New Timer</div>
+
+          <!-- AI input -->
+          <div style="margin-top:20px;background:var(--surface);border-radius:14px;padding:16px;">
+            <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;">✨ AI Breakdown</div>
+            <div style="background:var(--elevated);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-size:0.9rem;">
+              make pasta carbonara
+            </div>
+            <button style="width:100%;margin-top:10px;padding:12px;border-radius:10px;background:var(--primary);border:none;color:var(--bg);font-size:0.9rem;cursor:pointer;font-weight:600;">Break it down ✨</button>
+          </div>
+
+          <!-- Generated steps -->
+          <div style="margin-top:16px;">
+            <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Generated Steps</div>
+
+            <div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="color:var(--muted);font-size:0.8rem;">≡</span>
+                <span style="color:var(--text);font-size:0.9rem;">Boil water</span>
+              </div>
+              <span style="color:var(--primary);font-size:0.85rem;font-weight:500;">10m</span>
+            </div>
+            <div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="color:var(--muted);font-size:0.8rem;">≡</span>
+                <span style="color:var(--text);font-size:0.9rem;">Cook spaghetti</span>
+              </div>
+              <span style="color:var(--primary);font-size:0.85rem;font-weight:500;">12m</span>
+            </div>
+            <div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="color:var(--muted);font-size:0.8rem;">≡</span>
+                <span style="color:var(--text);font-size:0.9rem;">Fry guanciale</span>
+              </div>
+              <span style="color:var(--primary);font-size:0.85rem;font-weight:500;">8m</span>
+            </div>
+            <div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="color:var(--muted);font-size:0.8rem;">≡</span>
+                <span style="color:var(--text);font-size:0.9rem;">Mix eggs & cheese</span>
+              </div>
+              <span style="color:var(--primary);font-size:0.85rem;font-weight:500;">3m</span>
+            </div>
+            <div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="color:var(--muted);font-size:0.8rem;">≡</span>
+                <span style="color:var(--text);font-size:0.9rem;">Combine & serve</span>
+              </div>
+              <span style="color:var(--primary);font-size:0.85rem;font-weight:500;">5m</span>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:var(--muted);">
+            <span>5 steps · 38 min total</span>
+            <button style="background:none;border:none;color:var(--primary-soft);font-size:0.8rem;cursor:pointer;">🔄 Regenerate</button>
+          </div>
+
+          <button style="width:100%;margin-top:16px;padding:14px;border-radius:14px;background:var(--primary);border:none;color:var(--bg);font-size:1rem;cursor:pointer;font-weight:700;">Save Timer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 6: FULL BLEED
+     Color fills the screen based on state. Immersive, ambient.
+     ============================================================ -->
+<section id="d6" class="direction">
+  <div class="dir-header">
+    <h2>6. Full Bleed</h2>
+    <p class="philosophy">The screen becomes the timer state. Background color shifts with ahead/behind status — you feel the pace without reading. Immersive, ambient, like being inside the timer. The ultimate "glance and know" approach.</p>
+    <div class="traits">
+      <span class="trait">Color = State</span>
+      <span class="trait">Ambient Immersion</span>
+      <span class="trait">Glanceable</span>
+      <span class="trait">Zero Reading Required</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer (Ahead)</div>
+      <div class="phone-frame" style="background: linear-gradient(180deg, #0A1510 0%, #0C1A15 50%, #0E1F18 100%);">
+        <div class="status-bar" style="color: rgba(232,220,200,0.4);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center">
+            <!-- Large ring -->
+            <svg class="ring-svg" width="280" height="280" viewBox="0 0 280 280">
+              <circle cx="140" cy="140" r="126" fill="none" stroke="rgba(107,181,160,0.1)" stroke-width="12" />
+              <circle cx="140" cy="140" r="126" fill="none" stroke="var(--ahead)" stroke-width="12"
+                stroke-linecap="round" stroke-dasharray="792" stroke-dashoffset="237" opacity="0.7" />
+              <circle cx="140" cy="140" r="106" fill="none" stroke="rgba(126,189,115,0.1)" stroke-width="8" />
+              <circle cx="140" cy="140" r="106" fill="none" stroke="var(--primary)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="666" stroke-dashoffset="266" />
+              <text x="140" y="120" text-anchor="middle" fill="var(--text)" font-family="Inter" font-size="18" font-weight="400" opacity="0.7" transform="rotate(90,140,140)">Shower</text>
+              <text x="140" y="158" text-anchor="middle" fill="var(--text)" font-family="Inter" font-size="48" font-weight="200" transform="rotate(90,140,140)">5:23</text>
+              <text x="140" y="185" text-anchor="middle" fill="var(--ahead)" font-family="Inter" font-size="14" font-weight="500" transform="rotate(90,140,140)">1 min ahead</text>
+            </svg>
+          </div>
+
+          <!-- Subtle step dots -->
+          <div style="display:flex;justify-content:center;gap:16px;padding-bottom:1rem;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--primary);opacity:0.4;"></div>
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--ahead);"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+          </div>
+
+          <div style="display:flex;justify-content:center;gap:20px;padding-bottom:40px;">
+            <button style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text);font-size:1.2rem;cursor:pointer;">⏸</button>
+            <button style="width:56px;height:56px;border-radius:50%;background:var(--primary);border:none;color:var(--bg);font-size:1.2rem;cursor:pointer;">⏭</button>
+            <button style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--accent-warm);font-size:0.7rem;cursor:pointer;font-weight:600;">+1m</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Running Timer (Behind)</div>
+      <div class="phone-frame" style="background: linear-gradient(180deg, #110E08 0%, #1A1408 50%, #1E180A 100%);">
+        <div class="status-bar" style="color: rgba(232,220,200,0.4);">
+          <span class="time">6:55 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center">
+            <svg class="ring-svg" width="280" height="280" viewBox="0 0 280 280">
+              <circle cx="140" cy="140" r="126" fill="none" stroke="rgba(212,169,106,0.1)" stroke-width="12" />
+              <circle cx="140" cy="140" r="126" fill="none" stroke="var(--behind)" stroke-width="12"
+                stroke-linecap="round" stroke-dasharray="792" stroke-dashoffset="158" opacity="0.7" />
+              <circle cx="140" cy="140" r="106" fill="none" stroke="rgba(212,169,106,0.1)" stroke-width="8" />
+              <circle cx="140" cy="140" r="106" fill="none" stroke="var(--accent-warm)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="666" stroke-dashoffset="133" />
+              <text x="140" y="120" text-anchor="middle" fill="var(--text)" font-family="Inter" font-size="18" font-weight="400" opacity="0.7" transform="rotate(90,140,140)">Breakfast</text>
+              <text x="140" y="158" text-anchor="middle" fill="var(--text)" font-family="Inter" font-size="48" font-weight="200" transform="rotate(90,140,140)">14:30</text>
+              <text x="140" y="185" text-anchor="middle" fill="var(--behind)" font-family="Inter" font-size="14" font-weight="500" transform="rotate(90,140,140)">3 min behind</text>
+            </svg>
+          </div>
+
+          <div style="display:flex;justify-content:center;gap:16px;padding-bottom:1rem;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--primary);opacity:0.4;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--primary);opacity:0.4;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--primary);opacity:0.4;"></div>
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--behind);"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+          </div>
+
+          <div style="display:flex;justify-content:center;gap:20px;padding-bottom:40px;">
+            <button style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text);font-size:1.2rem;cursor:pointer;">⏸</button>
+            <button style="width:56px;height:56px;border-radius:50%;background:var(--accent-warm);border:none;color:var(--bg);font-size:1.2rem;cursor:pointer;">⏭</button>
+            <button style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--accent-warm);font-size:0.7rem;cursor:pointer;font-weight:600;">+1m</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 7: SOFT FOCUS
+     Gaussian-blur-like softness. Gentle gradients. Dreamy.
+     ============================================================ -->
+<section id="d7" class="direction">
+  <div class="dir-header">
+    <h2>7. Soft Focus</h2>
+    <p class="philosophy">Soft, dreamy, gentle. Everything has rounded edges, subtle gradients, and a bokeh-like quality. The app feels like looking through frosted glass — present but not demanding. Perfect for the "emotional co-pilot" that doesn't add stress.</p>
+    <div class="traits">
+      <span class="trait">Soft Gradients</span>
+      <span class="trait">Frosted Glass</span>
+      <span class="trait">Dreamy + Gentle</span>
+      <span class="trait">Low Visual Stress</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer</div>
+      <div class="phone-frame" style="background: radial-gradient(ellipse at 50% 30%, #172018 0%, var(--bg) 70%);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full">
+          <div class="p-center">
+            <!-- Soft glow background -->
+            <div style="position:relative;">
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle, rgba(126,189,115,0.08) 0%, transparent 70%);"></div>
+
+              <svg class="ring-svg" width="240" height="240" viewBox="0 0 240 240" style="position:relative;z-index:1;">
+                <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(42,51,38,0.5)" stroke-width="10" />
+                <circle cx="120" cy="120" r="108" fill="none" stroke="var(--ahead)" stroke-width="10"
+                  stroke-linecap="round" stroke-dasharray="679" stroke-dashoffset="204" opacity="0.6" />
+                <circle cx="120" cy="120" r="90" fill="none" stroke="rgba(42,51,38,0.5)" stroke-width="8" />
+                <circle cx="120" cy="120" r="90" fill="none" stroke="var(--primary)" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="565" stroke-dashoffset="226" opacity="0.8" />
+
+                <text x="120" y="100" text-anchor="middle" fill="var(--primary-soft)" font-family="DM Sans" font-size="18" font-weight="500" transform="rotate(90,120,120)">Shower</text>
+                <text x="120" y="138" text-anchor="middle" fill="var(--text)" font-family="DM Sans" font-size="40" font-weight="400" transform="rotate(90,120,120)">5:23</text>
+                <text x="120" y="162" text-anchor="middle" fill="var(--ahead)" font-family="DM Sans" font-size="12" font-weight="400" class="anim-breathe" transform="rotate(90,120,120)">1 min ahead</text>
+              </svg>
+            </div>
+
+            <!-- Frosted info card -->
+            <div style="margin-top:2rem;background:rgba(30,38,27,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:16px;padding:14px 20px;border:1px solid rgba(42,51,38,0.5);text-align:center;width:90%;">
+              <div style="font-size:0.8rem;color:var(--primary-soft);">Step 2 of 5 · 12:35 elapsed</div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">Next: Get dressed · 5 min</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;padding:16px 24px 40px;">
+            <button style="flex:1;padding:16px;border-radius:16px;background:rgba(30,38,27,0.6);backdrop-filter:blur(10px);border:1px solid rgba(42,51,38,0.5);color:var(--text);font-size:0.9rem;cursor:pointer;font-family:'DM Sans',sans-serif;">⏸ Pause</button>
+            <button style="flex:1;padding:16px;border-radius:16px;background:rgba(126,189,115,0.8);border:none;color:var(--bg);font-size:0.9rem;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;">⏭ Skip</button>
+            <button style="padding:16px;border-radius:16px;background:rgba(30,38,27,0.6);backdrop-filter:blur(10px);border:1px solid rgba(42,51,38,0.5);color:var(--accent-warm);font-size:0.85rem;cursor:pointer;font-family:'DM Sans',sans-serif;">+1m</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Timer Library</div>
+      <div class="phone-frame" style="background: radial-gradient(ellipse at 50% 20%, #14190F 0%, var(--bg) 60%);">
+        <div class="status-bar" style="color: var(--muted);">
+          <span class="time">6:42 AM</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div style="padding:8px 20px;">
+          <div style="font-size:0.85rem;color:var(--muted);font-family:'DM Sans',sans-serif;">Good morning</div>
+          <div style="font-size:1.5rem;font-weight:700;color:var(--text);font-family:'DM Sans',sans-serif;">My Timers</div>
+
+          <div style="margin-top:20px;">
+            <div style="background:rgba(30,38,27,0.5);backdrop-filter:blur(10px);border:1px solid rgba(42,51,38,0.4);border-radius:18px;padding:18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:1rem;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;">Morning Routine</div>
+                <div style="font-size:0.8rem;color:var(--muted);margin-top:3px;">5 steps · 33 min</div>
+              </div>
+              <div style="width:48px;height:48px;border-radius:50%;background:rgba(126,189,115,0.8);display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:1.3rem;">▶</div>
+            </div>
+
+            <div style="background:rgba(30,38,27,0.5);backdrop-filter:blur(10px);border:1px solid rgba(42,51,38,0.4);border-radius:18px;padding:18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:1rem;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;">Evening Wind-Down</div>
+                <div style="font-size:0.8rem;color:var(--muted);margin-top:3px;">4 steps · 25 min</div>
+              </div>
+              <div style="width:48px;height:48px;border-radius:50%;background:rgba(126,189,115,0.8);display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:1.3rem;">▶</div>
+            </div>
+
+            <div style="background:rgba(30,38,27,0.3);backdrop-filter:blur(10px);border:2px dashed rgba(42,51,38,0.6);border-radius:18px;padding:24px;text-align:center;margin-top:14px;">
+              <div style="font-size:1.2rem;margin-bottom:4px;color:var(--muted);">+</div>
+              <div style="font-size:0.85rem;color:var(--muted);font-family:'DM Sans',sans-serif;">Create new timer</div>
+            </div>
+
+            <div style="background:linear-gradient(135deg, rgba(126,189,115,0.06), rgba(212,169,106,0.06));border:1px solid rgba(42,51,38,0.4);border-radius:18px;padding:16px;text-align:center;margin-top:10px;">
+              <div style="font-size:0.85rem;color:var(--primary-soft);font-family:'DM Sans',sans-serif;">✨ Break down a task with AI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DIRECTION 8: TERMINAL
+     Monospace, data-forward, hacker-calm aesthetic.
+     ============================================================ -->
+<section id="d8" class="direction">
+  <div class="dir-header">
+    <h2>8. Terminal</h2>
+    <p class="philosophy">Monospace typography, ASCII-inspired progress, data-forward. For the developer or power user who finds calm in structured information. Not for everyone — but deeply satisfying for the right person. "My morning routine has an API."</p>
+    <div class="traits">
+      <span class="trait">Monospace</span>
+      <span class="trait">Data-Forward</span>
+      <span class="trait">ASCII Progress</span>
+      <span class="trait">Hacker Calm</span>
+    </div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-container">
+      <div class="screen-label">Running Timer</div>
+      <div class="phone-frame" style="background: #0A0D08; font-family:'JetBrains Mono',monospace;">
+        <div class="status-bar" style="color: var(--muted); font-family:'JetBrains Mono',monospace; font-size:0.7rem;">
+          <span class="time">06:42</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full" style="padding:16px 20px;">
+          <!-- Header -->
+          <div style="color:var(--muted);font-size:0.7rem;border-bottom:1px solid var(--border);padding-bottom:8px;">
+            morning_routine <span style="color:var(--primary);">RUNNING</span> [02/05]
+          </div>
+
+          <!-- Current step -->
+          <div style="margin-top:24px;">
+            <div style="color:var(--muted);font-size:0.65rem;">CURRENT_STEP</div>
+            <div style="color:var(--text);font-size:1.8rem;font-weight:400;margin-top:4px;">shower</div>
+          </div>
+
+          <!-- Time -->
+          <div style="margin-top:20px;">
+            <div style="color:var(--muted);font-size:0.65rem;">ELAPSED / PLANNED</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+              <span style="color:var(--text);font-size:2.5rem;font-weight:300;">05:23</span>
+              <span style="color:var(--muted);font-size:1rem;">/ 08:00</span>
+            </div>
+          </div>
+
+          <!-- ASCII progress bar -->
+          <div style="margin-top:20px;">
+            <div style="color:var(--muted);font-size:0.65rem;">STEP_PROGRESS</div>
+            <div style="color:var(--primary);font-size:0.85rem;margin-top:4px;">
+              [████████████░░░░░░] 66%
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="color:var(--muted);font-size:0.65rem;">TOTAL_PROGRESS</div>
+            <div style="color:var(--ahead);font-size:0.85rem;margin-top:4px;">
+              [███████░░░░░░░░░░░] 38%
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div style="margin-top:20px;padding:10px 12px;background:rgba(107,181,160,0.08);border-left:3px solid var(--ahead);border-radius:0 8px 8px 0;">
+            <div style="color:var(--ahead);font-size:0.8rem;">STATUS: 1m ahead // nice pace</div>
+          </div>
+
+          <!-- Step list -->
+          <div style="margin-top:24px;font-size:0.75rem;">
+            <div style="color:var(--muted);font-size:0.65rem;margin-bottom:6px;">STEPS</div>
+            <div style="color:var(--muted);padding:3px 0;text-decoration:line-through;">✓ wake_up ........... 03:12</div>
+            <div style="color:var(--primary);padding:3px 0;font-weight:500;">▸ shower ............. 05:23 <span style="color:var(--muted);">/08:00</span></div>
+            <div style="color:var(--muted);padding:3px 0;opacity:0.5;">  get_dressed ........ 05:00</div>
+            <div style="color:var(--muted);padding:3px 0;opacity:0.5;">  breakfast .......... 12:00</div>
+            <div style="color:var(--muted);padding:3px 0;opacity:0.5;">  brush_teeth ........ 03:00</div>
+          </div>
+
+          <div style="flex:1;"></div>
+
+          <!-- Controls -->
+          <div style="display:flex;gap:8px;padding-bottom:28px;">
+            <button style="flex:1;padding:12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.8rem;cursor:pointer;font-family:'JetBrains Mono',monospace;">PAUSE</button>
+            <button style="flex:1;padding:12px;border-radius:8px;background:var(--primary);border:none;color:var(--bg);font-size:0.8rem;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:700;">SKIP →</button>
+            <button style="padding:12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--accent-warm);font-size:0.8rem;cursor:pointer;font-family:'JetBrains Mono',monospace;">+1M</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-container">
+      <div class="screen-label">Completion View</div>
+      <div class="phone-frame" style="background: #0A0D08; font-family:'JetBrains Mono',monospace;">
+        <div class="status-bar" style="color: var(--muted); font-family:'JetBrains Mono',monospace; font-size:0.7rem;">
+          <span class="time">07:18</span>
+          <span class="icons">●●● 🔋</span>
+        </div>
+        <div class="p-full" style="padding:16px 20px;">
+          <div style="color:var(--primary);font-size:0.7rem;border-bottom:1px solid var(--border);padding-bottom:8px;">
+            morning_routine <span style="color:var(--ahead);">COMPLETE</span>
+          </div>
+
+          <div style="text-align:center;margin-top:3rem;">
+            <div style="font-size:2.5rem;">☕</div>
+            <div style="color:var(--text);font-size:1.4rem;margin-top:0.5rem;">DONE</div>
+            <div style="color:var(--ahead);font-size:0.85rem;margin-top:0.5rem;">38m total // 3m ahead</div>
+          </div>
+
+          <div style="margin-top:2rem;font-size:0.75rem;">
+            <div style="color:var(--muted);font-size:0.65rem;margin-bottom:8px;">RESULTS</div>
+            <div style="padding:4px 0;color:var(--text);">  wake_up .... 03:12 <span style="color:var(--primary);">OK</span></div>
+            <div style="padding:4px 0;color:var(--text);">  shower ..... 10:00 <span style="color:var(--accent-warm);">+2m</span></div>
+            <div style="padding:4px 0;color:var(--text);">  dressed .... 04:00 <span style="color:var(--primary);">-1m</span></div>
+            <div style="padding:4px 0;color:var(--text);">  breakfast .. 12:00 <span style="color:var(--primary);">OK</span></div>
+            <div style="padding:4px 0;color:var(--text);">  teeth ..... 03:00 <span style="color:var(--primary);">OK</span></div>
+          </div>
+
+          <div style="margin-top:1.5rem;font-size:0.75rem;">
+            <div style="color:var(--muted);font-size:0.65rem;margin-bottom:8px;">SUMMARY</div>
+            <div style="padding:4px 0;color:var(--text);">completed: <span style="color:var(--primary);">5</span></div>
+            <div style="padding:4px 0;color:var(--text);">skipped:   <span style="color:var(--muted);">0</span></div>
+            <div style="padding:4px 0;color:var(--text);">overruns:  <span style="color:var(--accent-warm);">1</span> (shower)</div>
+          </div>
+
+          <div style="flex:1;"></div>
+
+          <div style="padding-bottom:28px;">
+            <button style="width:100%;padding:14px;border-radius:8px;background:var(--primary);border:none;color:var(--bg);font-size:0.9rem;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:700;">CLOSE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  function show(id, btn) {
+    document.querySelectorAll('.direction').forEach(s => s.classList.remove('visible'));
+    document.getElementById(id).classList.add('visible');
+    document.querySelectorAll('.dir-nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
