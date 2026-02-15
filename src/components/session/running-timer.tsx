@@ -6,10 +6,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { getSession } from '@/lib/firebase/sessions';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
 import { useTTS } from '@/hooks/use-tts';
+import { useWakeLock } from '@/hooks/use-wake-lock';
 import { PlaybackControls } from '@/components/session/playback-controls';
 import { TransitionOverlay } from '@/components/session/transition-overlay';
+import { ProgressRing } from '@/components/session/progress-ring';
+import { StepDots } from '@/components/session/step-dots';
+import { CompletionView } from '@/components/session/completion-view';
 import { calculatePace } from '@/lib/utils/pace';
-import { formatDuration, formatDurationSpeech } from '@/lib/utils/time';
+import { formatDuration, formatDurationSpeech, formatCountdown } from '@/lib/utils/time';
 import type { SessionStep, StepStatus } from '@/types/session';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -55,6 +59,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   const { user } = useAuth();
   const engine = useTimerEngine();
   const tts = useTTS();
+  const wakeLock = useWakeLock();
   const chimeRef = useRef<HTMLAudioElement | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const lastTransitionTimestamp = useRef<number>(0);
@@ -161,14 +166,39 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     loadSession();
   }, [user, sessionId, engine.session, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Redirect on completion
+  // Cancel TTS on completion
   useEffect(() => {
     if (engine.isCompleted) {
-      toast.success('Timer completed!');
-      const timer = setTimeout(() => router.push('/app'), 2000);
-      return () => clearTimeout(timer);
+      tts.cancel();
     }
-  }, [engine.isCompleted, router]);
+  }, [engine.isCompleted, tts]);
+
+  // Wake lock lifecycle: acquire when running, release when paused/completed
+  useEffect(() => {
+    if (engine.isRunning && !engine.isPaused && !engine.isCompleted) {
+      wakeLock.request();
+    } else {
+      wakeLock.release();
+    }
+  }, [engine.isRunning, engine.isPaused, engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-acquire wake lock on visibility change (tab returns to foreground)
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (
+        document.visibilityState === 'visible' &&
+        engine.isRunning &&
+        !engine.isPaused &&
+        !engine.isCompleted
+      ) {
+        wakeLock.request();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [engine.isRunning, engine.isPaused, engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!engine.session) {
     return (
@@ -183,11 +213,47 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
 
   const { session, currentStep, elapsedTime, totalElapsedTime, isRunning, isPaused, isCompleted } =
     engine;
+
+  // Show completion view when session is done
+  if (isCompleted) {
+    return <CompletionView session={session} />;
+  }
+
   const isLastStep = session.currentStepIndex >= session.steps.length - 1;
   const totalPlannedDuration = session.steps.reduce((sum, s) => sum + s.plannedDuration, 0);
 
+  // Calculate pace for ring coloring
+  const pace = calculatePace(session.steps, session.currentStepIndex, elapsedTime);
+
+  // Step progress (inner ring) — capped at 1.0 when overrunning
+  const stepProgress = currentStep
+    ? Math.min(elapsedTime / currentStep.plannedDuration, 1.0)
+    : 0;
+
+  // Total progress (outer ring) — cumulative elapsed / total planned
+  const completedStepsDuration = session.steps
+    .slice(0, session.currentStepIndex)
+    .reduce((sum, s) => sum + s.elapsedTime, 0);
+  const totalProgress = totalPlannedDuration > 0
+    ? Math.min((completedStepsDuration + elapsedTime) / totalPlannedDuration, 1.0)
+    : 0;
+
+  const isOverrun = currentStep ? elapsedTime > currentStep.plannedDuration : false;
+
+  // Elapsed display for ring center
+  const elapsedDisplay = currentStep
+    ? formatCountdown(currentStep.plannedDuration, elapsedTime)
+    : formatDuration(elapsedTime);
+
+  // Aria elapsed label for screen readers
+  const ariaMinutes = Math.floor(elapsedTime / 60);
+  const ariaSeconds = elapsedTime % 60;
+  const ariaElapsedLabel = ariaMinutes > 0
+    ? `${ariaMinutes} minute${ariaMinutes === 1 ? '' : 's'} ${ariaSeconds} second${ariaSeconds === 1 ? '' : 's'} elapsed`
+    : `${ariaSeconds} second${ariaSeconds === 1 ? '' : 's'} elapsed`;
+
   return (
-    <div className="mx-auto max-w-lg space-y-8">
+    <div className="mx-auto max-w-lg space-y-6">
       {/* Header */}
       <div className="text-center relative">
         <h1 className="text-xl font-semibold text-foreground">{session.timerName}</h1>
@@ -218,50 +284,30 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         </button>
       </div>
 
-      {/* Current step display */}
-      {currentStep && !isCompleted && (
-        <div className="rounded-xl border border-border bg-surface p-6 text-center">
-          <p className="text-sm text-muted-foreground">Current Step</p>
-          <h2 className="mt-1 text-2xl font-bold text-foreground" data-testid="current-step-name">
-            {currentStep.name}
-          </h2>
-
-          {/* Elapsed time — large display */}
-          <div className="mt-4">
-            <span
-              className="text-5xl font-mono font-bold tabular-nums text-primary"
-              data-testid="step-elapsed"
-            >
-              {formatDuration(elapsedTime)}
-            </span>
-            <p className="mt-1 text-sm text-muted-foreground">
-              of {formatDuration(currentStep.plannedDuration)}
-            </p>
-          </div>
-
-          {/* Overrun indicator */}
-          {elapsedTime > currentStep.plannedDuration && (
-            <p className="mt-2 text-sm font-medium text-warning" data-testid="overrun-indicator">
-              +{formatDuration(elapsedTime - currentStep.plannedDuration)} over
-            </p>
-          )}
-        </div>
+      {/* Zen Ring — hero visual */}
+      {currentStep && (
+        <ProgressRing
+          stepProgress={stepProgress}
+          totalProgress={totalProgress}
+          stepName={currentStep.name}
+          elapsedDisplay={elapsedDisplay}
+          paceMessage={pace.message}
+          paceStatus={pace.status}
+          isOverrun={isOverrun}
+          isPaused={isPaused}
+          stepNumber={session.currentStepIndex + 1}
+          totalSteps={session.steps.length}
+          timerName={session.timerName}
+          ariaElapsedLabel={ariaElapsedLabel}
+        />
       )}
 
-      {/* Completion display */}
-      {isCompleted && (
-        <div className="rounded-xl border border-primary bg-surface p-6 text-center">
-          <h2 className="text-2xl font-bold text-primary">Timer Complete!</h2>
-          <p className="mt-2 text-muted-foreground">
-            Total time: {formatDuration(totalElapsedTime)} / {formatDuration(totalPlannedDuration)}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">Redirecting to library…</p>
-        </div>
-      )}
+      {/* Step dots */}
+      <StepDots steps={session.steps} currentIndex={session.currentStepIndex} />
 
       {/* Transition overlay */}
       {engine.lastTransition && (() => {
-        const pace = calculatePace(
+        const transitionPace = calculatePace(
           session.steps,
           session.currentStepIndex,
           elapsedTime,
@@ -271,8 +317,8 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
             stepName={engine.lastTransition.stepName}
             stepNumber={engine.lastTransition.stepNumber}
             totalSteps={engine.lastTransition.totalSteps}
-            paceMessage={pace.message}
-            paceStatus={pace.status}
+            paceMessage={transitionPace.message}
+            paceStatus={transitionPace.status}
             visible={overlayVisible}
           />
         );
@@ -282,7 +328,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       <PlaybackControls
         isRunning={isRunning}
         isPaused={isPaused}
-        isCompleted={isCompleted}
+        isCompleted={false}
         isLastStep={isLastStep}
         onPause={engine.pause}
         onResume={engine.resume}
@@ -299,7 +345,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
             <li
               key={step.id}
               className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
-                i === session.currentStepIndex && !isCompleted
+                i === session.currentStepIndex
                   ? 'bg-elevated'
                   : ''
               } ${stepStatusClass(step.status)}`}
@@ -307,7 +353,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
               <span className="w-5 text-center">{stepStatusIcon(step.status)}</span>
               <span className="flex-1">{step.name}</span>
               <span className="text-xs tabular-nums">
-                {step.status === 'running' || (i === session.currentStepIndex && !isCompleted)
+                {step.status === 'running' || i === session.currentStepIndex
                   ? `${formatDuration(elapsedTime)} / ${formatDuration(step.plannedDuration)}`
                   : step.elapsedTime > 0
                     ? `${formatDuration(step.elapsedTime)} / ${formatDuration(step.plannedDuration)}`

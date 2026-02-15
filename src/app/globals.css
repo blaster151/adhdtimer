@@ -131,3 +131,14 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Progress ring animation — smooth stroke transition */
+.ring-progress {
+  transition: stroke-dashoffset 1s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress {
+    transition: none;
+  }
+}

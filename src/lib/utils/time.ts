@@ -100,3 +100,17 @@ export function formatDurationSpeech(seconds: number): string {
   const roundedMinutes = Math.ceil(seconds / 60);
   return `${roundedMinutes} minute${roundedMinutes === 1 ? '' : 's'}`;
 }
+
+/**
+ * Format a countdown display: shows remaining time, or "+M:SS over" when overrunning.
+ * @example formatCountdown(600, 300) → "5:00"  (5 min remaining)
+ * @example formatCountdown(600, 600) → "0:00"
+ * @example formatCountdown(600, 735) → "+2:15 over"
+ */
+export function formatCountdown(plannedDuration: number, elapsedTime: number): string {
+  if (elapsedTime >= plannedDuration) {
+    const overrun = elapsedTime - plannedDuration;
+    return `+${formatDuration(overrun)} over`;
+  }
+  return formatDuration(plannedDuration - elapsedTime);
+}

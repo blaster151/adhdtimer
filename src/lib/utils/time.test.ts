@@ -5,6 +5,7 @@ import {
   formatRelativeDate,
   parseDurationInput,
   formatDurationSpeech,
+  formatCountdown,
 } from './time';
 
 describe('formatDuration', () => {
@@ -166,5 +167,31 @@ describe('formatDurationSpeech', () => {
 
   it('formats 8 minutes for TTS example', () => {
     expect(formatDurationSpeech(480)).toBe('8 minutes');
+  });
+});
+
+describe('formatCountdown', () => {
+  it('shows remaining time when not overrunning', () => {
+    expect(formatCountdown(600, 300)).toBe('5:00');
+  });
+
+  it('shows 0:00 at exactly planned duration', () => {
+    expect(formatCountdown(600, 600)).toBe('+0:00 over');
+  });
+
+  it('shows overrun with + prefix and "over" suffix', () => {
+    expect(formatCountdown(600, 735)).toBe('+2:15 over');
+  });
+
+  it('shows full remaining time from start', () => {
+    expect(formatCountdown(600, 0)).toBe('10:00');
+  });
+
+  it('handles 1 second remaining', () => {
+    expect(formatCountdown(600, 599)).toBe('0:01');
+  });
+
+  it('handles large overrun', () => {
+    expect(formatCountdown(300, 3900)).toBe('+1:00:00 over');
   });
 });

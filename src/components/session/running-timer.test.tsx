@@ -31,6 +31,16 @@ vi.mock('@/hooks/use-tts', () => ({
   }),
 }));
 
+// Mock useWakeLock
+vi.mock('@/hooks/use-wake-lock', () => ({
+  useWakeLock: () => ({
+    isSupported: true,
+    isActive: false,
+    request: vi.fn(),
+    release: vi.fn(),
+  }),
+}));
+
 // Mock useAuth
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({
@@ -147,7 +157,7 @@ describe('RunningTimer', () => {
     await vi.waitFor(() => {
       expect(screen.getByText('Morning Routine')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('current-step-name')).toHaveTextContent('Shower');
+    expect(screen.getByTestId('ring-step-name')).toHaveTextContent('Shower');
     expect(screen.getAllByText('Breakfast').length).toBeGreaterThan(0);
   });
 });
