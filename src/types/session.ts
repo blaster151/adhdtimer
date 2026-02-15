@@ -32,6 +32,7 @@ export interface RunSession {
   completedAt?: Timestamp;
   activeDeviceId: string;
   totalElapsedTime: number; // seconds
+  countdownMode?: boolean; // display countdown instead of elapsed (default false)
   steps: SessionStep[];
 }
 

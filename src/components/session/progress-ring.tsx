@@ -139,7 +139,7 @@ export function ProgressRing({
           <tspan
             x={CENTER}
             y={isPaused ? 148 : 155}
-            className={`text-[2.8rem] font-light tabular-nums ${isOverrun ? 'fill-[var(--behind)]' : 'fill-foreground'}`}
+            className={`text-[2.8rem] font-light tabular-nums transition-[fill] duration-300 ${isOverrun ? 'fill-[var(--behind)]' : 'fill-foreground'}`}
             data-testid="ring-time-display"
           >
             {elapsedDisplay}

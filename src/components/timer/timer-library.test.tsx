@@ -160,7 +160,13 @@ describe('TimerLibrary', () => {
     await vi.waitFor(() => {
       expect(screen.getByText('Morning Routine')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByLabelText('Edit Morning Routine'));
+    // Open kebab menu first
+    const trigger = screen.getByLabelText('More options for Morning Routine');
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' });
+    await vi.waitFor(() => {
+      expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(mockPush).toHaveBeenCalledWith('/app/timers/timer-1/edit');
   });
 

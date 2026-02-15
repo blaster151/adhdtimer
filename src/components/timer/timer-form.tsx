@@ -11,6 +11,7 @@ import { StepListEditor } from '@/components/timer/step-list-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 interface TimerFormProps {
   initialTimer?: TimerTemplate;
@@ -24,6 +25,9 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
     initialTimer?.steps ?? [
       { id: crypto.randomUUID(), name: '', plannedDuration: 300 },
     ],
+  );
+  const [countdownMode, setCountdownMode] = useState(
+    initialTimer?.countdownMode ?? false,
   );
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -61,7 +65,7 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
       name: name.trim(),
       description: description.trim() || undefined,
       totalPlannedDuration: totalDuration,
-      countdownMode: initialTimer?.countdownMode ?? false,
+      countdownMode,
       steps: steps.map((s) => ({
         ...s,
         name: s.name.trim(),
@@ -114,6 +118,21 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
 
       {/* Steps */}
       <StepListEditor steps={steps} onChange={setSteps} />
+
+      {/* Countdown mode toggle */}
+      <div className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="countdown-mode">Countdown mode</Label>
+          <p className="text-xs text-muted-foreground">Show remaining time instead of elapsed</p>
+        </div>
+        <Switch
+          id="countdown-mode"
+          checked={countdownMode}
+          onCheckedChange={setCountdownMode}
+          disabled={isSaving}
+          aria-label="Countdown mode"
+        />
+      </div>
 
       {/* Total Duration */}
       <div className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">

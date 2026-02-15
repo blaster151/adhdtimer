@@ -9,8 +9,7 @@ export function EmptyState() {
       <div className="mb-4 text-5xl">🌲</div>
       <h3 className="mb-2 text-xl font-semibold text-foreground">Create your first timer</h3>
       <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-        Build a routine with named steps and durations. Perfect for morning routines, work sprints,
-        or anything that needs gentle structure.
+        Build a routine, then just press play.
       </p>
       <Button asChild>
         <Link href="/app/timers/new">Create Timer</Link>

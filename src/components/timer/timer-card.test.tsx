@@ -65,10 +65,16 @@ describe('TimerCard', () => {
     expect(onPlay).toHaveBeenCalledWith(mockTimer);
   });
 
-  it('calls onEdit when Edit is clicked', () => {
+  it('calls onEdit from kebab menu', async () => {
     const onEdit = vi.fn();
     render(<TimerCard timer={mockTimer} onEdit={onEdit} />);
-    fireEvent.click(screen.getByLabelText('Edit Morning Routine'));
+    // Open dropdown
+    const trigger = screen.getByLabelText('More options for Morning Routine');
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' });
+    await vi.waitFor(() => {
+      expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(onEdit).toHaveBeenCalledWith(mockTimer);
   });
 

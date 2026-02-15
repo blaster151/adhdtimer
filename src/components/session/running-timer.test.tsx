@@ -240,4 +240,26 @@ describe('RunningTimer', () => {
       );
     });
   });
+
+  it('shows count-up display by default (no countdownMode)', async () => {
+    mockFirestoreSession.loading = false;
+    mockFirestoreSession.session = makeSessionData();
+    render(<RunningTimer sessionId="session-1" />);
+    await vi.waitFor(() => {
+      expect(screen.getByText('Morning Routine')).toBeInTheDocument();
+    });
+    // Default: elapsed display should show "0:00" (count-up from zero)
+    expect(screen.getByTestId('ring-time-display')).toHaveTextContent('0:00');
+  });
+
+  it('shows countdown display when countdownMode is true', async () => {
+    mockFirestoreSession.loading = false;
+    mockFirestoreSession.session = makeSessionData({ countdownMode: true });
+    render(<RunningTimer sessionId="session-1" />);
+    await vi.waitFor(() => {
+      expect(screen.getByText('Morning Routine')).toBeInTheDocument();
+    });
+    // Countdown: should show remaining time "10:00" (600s planned for first step)
+    expect(screen.getByTestId('ring-time-display')).toHaveTextContent('10:00');
+  });
 });

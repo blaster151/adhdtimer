@@ -50,6 +50,7 @@ export async function createSession(
       startedAt: now,
       activeDeviceId: deviceId,
       totalElapsedTime: 0,
+      countdownMode: template.countdownMode ?? false,
       steps,
     };
 

@@ -4,6 +4,13 @@ import { TimerForm } from './timer-form';
 import type { TimerTemplate } from '@/types/timer';
 import { Timestamp } from 'firebase/firestore';
 
+// Polyfill ResizeObserver for Radix Switch
+vi.stubGlobal('ResizeObserver', class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+});
+
 // Mock crypto.randomUUID
 vi.stubGlobal('crypto', {
   randomUUID: () => 'mock-uuid-' + Math.random().toString(36).slice(2),
@@ -249,5 +256,43 @@ describe('TimerForm', () => {
     await vi.waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Timer updated!');
     });
+  });
+
+  // ---- Countdown mode tests ----
+
+  it('renders countdown mode toggle', () => {
+    render(<TimerForm />);
+    expect(screen.getByLabelText('Countdown mode')).toBeInTheDocument();
+    expect(screen.getByText('Show remaining time instead of elapsed')).toBeInTheDocument();
+  });
+
+  it('countdown toggle defaults to off', () => {
+    render(<TimerForm />);
+    const toggle = screen.getByLabelText('Countdown mode');
+    expect(toggle).toHaveAttribute('data-state', 'unchecked');
+  });
+
+  it('pre-populates countdown toggle from initialTimer', () => {
+    const timerWithCountdown = { ...mockTimer, countdownMode: true };
+    render(<TimerForm initialTimer={timerWithCountdown} />);
+    const toggle = screen.getByLabelText('Countdown mode');
+    expect(toggle).toHaveAttribute('data-state', 'checked');
+  });
+
+  it('saves countdownMode when creating timer', async () => {
+    render(<TimerForm />);
+    fireEvent.change(screen.getByLabelText('Timer Name'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByLabelText('Step 1 name'), { target: { value: 'Work' } });
+    // Toggle countdown on
+    fireEvent.click(screen.getByLabelText('Countdown mode'));
+    fireEvent.click(screen.getByText('Save Timer'));
+
+    await vi.waitFor(() => {
+      expect(mockCreateTimer).toHaveBeenCalledOnce();
+    });
+    expect(mockCreateTimer).toHaveBeenCalledWith(
+      'test-uid',
+      expect.objectContaining({ countdownMode: true }),
+    );
   });
 });

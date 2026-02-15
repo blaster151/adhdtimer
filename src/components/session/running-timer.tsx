@@ -257,10 +257,13 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     : 0;
 
   const isOverrun = currentStep ? elapsedTime > currentStep.plannedDuration : false;
+  const countdownMode = session.countdownMode ?? false;
 
   // Elapsed display for ring center
   const elapsedDisplay = currentStep
-    ? formatCountdown(currentStep.plannedDuration, elapsedTime)
+    ? countdownMode
+      ? formatCountdown(currentStep.plannedDuration, elapsedTime)
+      : formatDuration(elapsedTime)
     : formatDuration(elapsedTime);
 
   // Aria elapsed label for screen readers
@@ -376,11 +379,21 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
             >
               <span className="w-5 text-center">{stepStatusIcon(step.status)}</span>
               <span className="flex-1">{step.name}</span>
-              <span className="text-xs tabular-nums">
+              <span className={`text-xs tabular-nums transition-colors duration-300 ${
+                countdownMode &&
+                ((step.status === 'running' && elapsedTime > step.plannedDuration) ||
+                 (step.elapsedTime > step.plannedDuration))
+                  ? 'text-warning'
+                  : ''
+              }`}>
                 {step.status === 'running' || i === session.currentStepIndex
-                  ? `${formatDuration(elapsedTime)} / ${formatDuration(step.plannedDuration)}`
+                  ? countdownMode
+                    ? formatCountdown(step.plannedDuration, elapsedTime)
+                    : `${formatDuration(elapsedTime)} / ${formatDuration(step.plannedDuration)}`
                   : step.elapsedTime > 0
-                    ? `${formatDuration(step.elapsedTime)} / ${formatDuration(step.plannedDuration)}`
+                    ? countdownMode
+                      ? formatCountdown(step.plannedDuration, step.elapsedTime)
+                      : `${formatDuration(step.elapsedTime)} / ${formatDuration(step.plannedDuration)}`
                     : formatDuration(step.plannedDuration)}
               </span>
             </li>
@@ -391,8 +404,14 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       {/* Total progress */}
       <div className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">
         <span className="text-sm text-muted-foreground">Total</span>
-        <span className="text-sm font-medium tabular-nums text-foreground">
-          {formatDuration(totalElapsedTime)} / {formatDuration(totalPlannedDuration)}
+        <span className={`text-sm font-medium tabular-nums transition-colors duration-300 ${
+          countdownMode && totalElapsedTime > totalPlannedDuration
+            ? 'text-warning'
+            : 'text-foreground'
+        }`}>
+          {countdownMode
+            ? formatCountdown(totalPlannedDuration, totalElapsedTime)
+            : `${formatDuration(totalElapsedTime)} / ${formatDuration(totalPlannedDuration)}`}
         </span>
       </div>
     </div>

@@ -43,20 +43,12 @@ export function TimerCard({ timer, onPlay, onEdit, onDelete, onDuplicate }: Time
         <div className="ml-3 flex shrink-0 items-center gap-1">
           <Button
             variant="default"
-            size="sm"
+            size="icon"
+            className="h-12 w-12 rounded-full text-lg"
             onClick={() => onPlay?.(timer)}
             aria-label={`Play ${timer.name}`}
           >
-            ▶ Play
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit?.(timer)}
-            aria-label={`Edit ${timer.name}`}
-          >
-            Edit
+            ▶
           </Button>
 
           <DropdownMenu>
@@ -66,6 +58,9 @@ export function TimerCard({ timer, onPlay, onEdit, onDelete, onDuplicate }: Time
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit?.(timer)}>
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onDuplicate?.(timer)}>
                 Duplicate
               </DropdownMenuItem>
