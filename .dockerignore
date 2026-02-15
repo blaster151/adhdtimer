@@ -1,0 +1,10 @@
+node_modules
+.next
+docs
+bmad
+.git
+.github
+.vscode
+.env.local
+.env.*.local
+*.md
