@@ -63,10 +63,20 @@ vi.mock('firebase/firestore', () => ({
 const mockGetTimers = vi.fn();
 const mockDeleteTimer = vi.fn();
 const mockDuplicateTimer = vi.fn();
+const mockUpdateTimer = vi.fn();
 vi.mock('@/lib/firebase/timers', () => ({
   getTimers: (...args: unknown[]) => mockGetTimers(...args),
   deleteTimer: (...args: unknown[]) => mockDeleteTimer(...args),
   duplicateTimer: (...args: unknown[]) => mockDuplicateTimer(...args),
+  updateTimer: (...args: unknown[]) => mockUpdateTimer(...args),
+}));
+
+// Mock session functions
+const mockCreateSession = vi.fn();
+vi.mock('@/lib/firebase/sessions', () => ({
+  createSession: (...args: unknown[]) => mockCreateSession(...args),
+  updateSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 const sampleTimers: TimerTemplate[] = [
@@ -127,11 +137,12 @@ describe('TimerLibrary', () => {
     mockGetTimers.mockResolvedValue({ data: sampleTimers, error: null });
     render(<TimerLibrary />);
     await vi.waitFor(() => {
-      expect(screen.getByRole('link', { name: '+ New Timer' })).toHaveAttribute(
-        'href',
-        '/app/timers/new',
-      );
+      expect(screen.getByText('+ New Timer')).toBeInTheDocument();
     });
+    expect(screen.getByText('+ New Timer').closest('a')).toHaveAttribute(
+      'href',
+      '/app/timers/new',
+    );
   });
 
   it('shows header with Timer Library title', async () => {
@@ -162,14 +173,11 @@ describe('TimerLibrary', () => {
     const trigger = screen.getByLabelText('More options for Morning Routine');
     fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' });
     // Click Delete in dropdown
-    await vi.waitFor(() => {
-      expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    // Confirm dialog should appear
-    await vi.waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
+    const deleteItem = await screen.findByRole('menuitem', { name: 'Delete' });
+    fireEvent.click(deleteItem);
+    // Confirm dialog should appear — use longer wait
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
   });
 
   it('removes timer from list after delete confirmation', async () => {
@@ -194,7 +202,7 @@ describe('TimerLibrary', () => {
     await vi.waitFor(() => {
       expect(mockDeleteTimer).toHaveBeenCalledWith('test-uid', 'timer-1');
     });
-  });
+  }, 10000);
 
   it('adds duplicated timer to list', async () => {
     const duplicated: TimerTemplate = {

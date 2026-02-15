@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { getTimers, deleteTimer, duplicateTimer } from '@/lib/firebase/timers';
+import { getTimers, deleteTimer, duplicateTimer, updateTimer } from '@/lib/firebase/timers';
+import { createSession } from '@/lib/firebase/sessions';
+import { Timestamp } from 'firebase/firestore';
 import type { TimerTemplate } from '@/types/timer';
 import { EmptyState } from '@/components/timer/empty-state';
 import { TimerCard } from '@/components/timer/timer-card';
@@ -46,8 +48,26 @@ export function TimerLibrary() {
     fetchTimers();
   }, [user]);
 
-  function handlePlay(timer: TimerTemplate) {
-    toast.info(`Play "${timer.name}" — coming in Story 1.6!`);
+  async function handlePlay(timer: TimerTemplate) {
+    if (!user) return;
+
+    // Get or create device ID
+    let deviceId = sessionStorage.getItem('adhdtimer-device-id');
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      sessionStorage.setItem('adhdtimer-device-id', deviceId);
+    }
+
+    const { data: session, error } = await createSession(user.uid, timer, deviceId);
+    if (error || !session) {
+      toast.error(error ?? 'Failed to start timer');
+      return;
+    }
+
+    // Update lastUsedAt
+    await updateTimer(user.uid, timer.id, { lastUsedAt: Timestamp.fromDate(new Date()) });
+
+    router.push(`/app/sessions/${session.id}`);
   }
 
   function handleEdit(timer: TimerTemplate) {
