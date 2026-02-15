@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { getDeviceId } from '@/hooks/use-device-id';
 import { getTimers, deleteTimer, duplicateTimer, updateTimer } from '@/lib/firebase/timers';
 import { createSession } from '@/lib/firebase/sessions';
 import { Timestamp } from 'firebase/firestore';
@@ -51,13 +52,13 @@ export function TimerLibrary() {
   async function handlePlay(timer: TimerTemplate) {
     if (!user) return;
 
-    // Get or create device ID
-    let deviceId = sessionStorage.getItem('adhdtimer-device-id');
-    if (!deviceId) {
-      deviceId = crypto.randomUUID();
-      sessionStorage.setItem('adhdtimer-device-id', deviceId);
+    // Block new session creation when offline
+    if (!navigator.onLine) {
+      toast.error('Connect to internet to start a timer');
+      return;
     }
 
+    const deviceId = getDeviceId();
     const { data: session, error } = await createSession(user.uid, timer, deviceId);
     if (error || !session) {
       toast.error(error ?? 'Failed to start timer');

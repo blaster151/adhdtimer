@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TimerLibrary } from './timer-library';
 import type { TimerTemplate } from '@/types/timer';
 import { Timestamp } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 // Mock next/link
 vi.mock('next/link', () => ({
@@ -225,6 +226,32 @@ describe('TimerLibrary', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }));
     await vi.waitFor(() => {
       expect(mockDuplicateTimer).toHaveBeenCalledWith('test-uid', 'timer-1');
+    });
+  });
+
+  it('shows offline toast when playing timer while offline', async () => {
+    const originalOnLine = navigator.onLine;
+    Object.defineProperty(navigator, 'onLine', {
+      value: false,
+      writable: true,
+      configurable: true,
+    });
+
+    mockGetTimers.mockResolvedValue({ data: [sampleTimers[0]], error: null });
+    render(<TimerLibrary />);
+    await vi.waitFor(() => {
+      expect(screen.getByText('Morning Routine')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Play Morning Routine'));
+
+    expect(toast.error).toHaveBeenCalledWith('Connect to internet to start a timer');
+    expect(mockCreateSession).not.toHaveBeenCalled();
+
+    Object.defineProperty(navigator, 'onLine', {
+      value: originalOnLine,
+      writable: true,
+      configurable: true,
     });
   });
 });

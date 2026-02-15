@@ -3,8 +3,13 @@ import {
   doc,
   addDoc,
   getDoc,
+  getDocs,
   updateDoc,
   onSnapshot,
+  query,
+  where,
+  orderBy,
+  limit,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './config';
@@ -109,4 +114,29 @@ export function subscribeToSession(
       onError(err);
     },
   );
+}
+
+/**
+ * Query for the most recent active (running or paused) session.
+ * Returns the first match or null if none found.
+ */
+export async function getActiveSession(
+  userId: string,
+): Promise<{ data: RunSession | null; error: string | null }> {
+  try {
+    const q = query(
+      sessionsCollection(userId),
+      where('status', 'in', ['running', 'paused']),
+      orderBy('startedAt', 'desc'),
+      limit(1),
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      return { data: null, error: null };
+    }
+    const doc = snap.docs[0];
+    return { data: { ...doc.data(), id: doc.id } as RunSession, error: null };
+  } catch (err) {
+    return { data: null, error: (err as Error).message };
+  }
 }
