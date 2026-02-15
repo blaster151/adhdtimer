@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { getSession } from '@/lib/firebase/sessions';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
+import { useTTS } from '@/hooks/use-tts';
 import { PlaybackControls } from '@/components/session/playback-controls';
 import { TransitionOverlay } from '@/components/session/transition-overlay';
 import { calculatePace } from '@/lib/utils/pace';
-import { formatDuration } from '@/lib/utils/time';
+import { formatDuration, formatDurationSpeech } from '@/lib/utils/time';
 import type { SessionStep, StepStatus } from '@/types/session';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -53,9 +54,11 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   const router = useRouter();
   const { user } = useAuth();
   const engine = useTimerEngine();
+  const tts = useTTS();
   const chimeRef = useRef<HTMLAudioElement | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const lastTransitionTimestamp = useRef<number>(0);
+  const hasAnnouncedFirstStep = useRef(false);
 
   // Pre-load chime audio on mount
   useEffect(() => {
@@ -66,7 +69,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     }
   }, []);
 
-  // React to step transitions — play chime and show overlay
+  // React to step transitions — play chime, speak TTS, and show overlay
   useEffect(() => {
     if (
       engine.lastTransition &&
@@ -77,9 +80,28 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       // Play chime
       if (chimeRef.current) {
         chimeRef.current.currentTime = 0;
-        chimeRef.current.play().catch(() => {
+        chimeRef.current.play()?.catch(() => {
           /* Audio play may be blocked by browser policy — ignore silently */
         });
+      }
+
+      // TTS after 50ms gap (chime alerts attention, TTS delivers content)
+      const step = engine.session?.steps[engine.session.currentStepIndex];
+      if (step) {
+        const ttsTimer = setTimeout(() => {
+          tts.speak(`${step.name}. ${formatDurationSpeech(step.plannedDuration)}.`);
+        }, 50);
+        // Clean up TTS timer on unmount
+        const overlayTimer = setTimeout(() => {
+          setOverlayVisible(false);
+          engine.clearTransition();
+        }, 4000);
+
+        setOverlayVisible(true);
+        return () => {
+          clearTimeout(ttsTimer);
+          clearTimeout(overlayTimer);
+        };
       }
 
       // Show overlay
@@ -90,7 +112,29 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [engine.lastTransition, engine.clearTransition]);
+  }, [engine.lastTransition, engine.clearTransition, engine.session, tts]);
+
+  // Announce first step via TTS on session start
+  useEffect(() => {
+    if (
+      engine.session &&
+      engine.isRunning &&
+      !hasAnnouncedFirstStep.current &&
+      engine.currentStep
+    ) {
+      hasAnnouncedFirstStep.current = true;
+      // Play chime + TTS for first step
+      if (chimeRef.current) {
+        chimeRef.current.currentTime = 0;
+        chimeRef.current.play()?.catch(() => {});
+      }
+      setTimeout(() => {
+        tts.speak(
+          `${engine.currentStep!.name}. ${formatDurationSpeech(engine.currentStep!.plannedDuration)}.`,
+        );
+      }, 50);
+    }
+  }, [engine.session, engine.isRunning, engine.currentStep, tts]);
 
   // Load session on mount
   useEffect(() => {
@@ -145,11 +189,33 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   return (
     <div className="mx-auto max-w-lg space-y-8">
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center relative">
         <h1 className="text-xl font-semibold text-foreground">{session.timerName}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Step {session.currentStepIndex + 1} of {session.steps.length}
         </p>
+        {/* TTS toggle */}
+        <button
+          type="button"
+          onClick={() => tts.setEnabled(!tts.isEnabled)}
+          className="absolute right-0 top-0 rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={tts.isEnabled ? 'Text-to-speech enabled' : 'Text-to-speech disabled'}
+          data-testid="tts-toggle"
+        >
+          {tts.isEnabled ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <line x1="23" y1="9" x2="17" y2="15" />
+              <line x1="17" y1="9" x2="23" y2="15" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* Current step display */}

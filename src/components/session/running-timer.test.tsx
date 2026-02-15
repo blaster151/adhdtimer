@@ -20,6 +20,17 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
 }));
 
+// Mock useTTS
+vi.mock('@/hooks/use-tts', () => ({
+  useTTS: () => ({
+    speak: vi.fn(),
+    cancel: vi.fn(),
+    isSupported: true,
+    isEnabled: true,
+    setEnabled: vi.fn(),
+  }),
+}));
+
 // Mock useAuth
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({

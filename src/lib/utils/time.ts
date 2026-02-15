@@ -71,3 +71,32 @@ export function formatRelativeDate(date: Date | null | undefined): string {
 export function parseDurationInput(minutes: number): number {
   return Math.round(minutes * 60);
 }
+
+/**
+ * Format a duration in seconds to a spoken string for TTS.
+ * @example formatDurationSpeech(480) → "8 minutes"
+ * @example formatDurationSpeech(60) → "1 minute"
+ * @example formatDurationSpeech(90) → "1 and a half minutes"
+ * @example formatDurationSpeech(30) → "30 seconds"
+ */
+export function formatDurationSpeech(seconds: number): string {
+  const totalMinutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (totalMinutes === 0) {
+    return `${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'}`;
+  }
+
+  if (remainingSeconds === 0) {
+    return `${totalMinutes} minute${totalMinutes === 1 ? '' : 's'}`;
+  }
+
+  if (remainingSeconds === 30) {
+    if (totalMinutes === 0) return '30 seconds';
+    return `${totalMinutes} and a half minute${totalMinutes === 1 ? '' : 's'}`;
+  }
+
+  // For non-round durations, just use minutes (round up)
+  const roundedMinutes = Math.ceil(seconds / 60);
+  return `${roundedMinutes} minute${roundedMinutes === 1 ? '' : 's'}`;
+}

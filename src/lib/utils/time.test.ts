@@ -4,6 +4,7 @@ import {
   formatOverrun,
   formatRelativeDate,
   parseDurationInput,
+  formatDurationSpeech,
 } from './time';
 
 describe('formatDuration', () => {
@@ -131,5 +132,39 @@ describe('parseDurationInput', () => {
 
   it('rounds to nearest second', () => {
     expect(parseDurationInput(1.01)).toBe(61);
+  });
+});
+
+describe('formatDurationSpeech', () => {
+  it('formats exact minutes', () => {
+    expect(formatDurationSpeech(300)).toBe('5 minutes');
+  });
+
+  it('formats 1 minute singular', () => {
+    expect(formatDurationSpeech(60)).toBe('1 minute');
+  });
+
+  it('formats half minutes', () => {
+    expect(formatDurationSpeech(90)).toBe('1 and a half minute');
+  });
+
+  it('formats multiple half minutes', () => {
+    expect(formatDurationSpeech(150)).toBe('2 and a half minutes');
+  });
+
+  it('formats seconds only', () => {
+    expect(formatDurationSpeech(30)).toBe('30 seconds');
+  });
+
+  it('formats 1 second singular', () => {
+    expect(formatDurationSpeech(1)).toBe('1 second');
+  });
+
+  it('rounds up non-round durations', () => {
+    expect(formatDurationSpeech(310)).toBe('6 minutes');
+  });
+
+  it('formats 8 minutes for TTS example', () => {
+    expect(formatDurationSpeech(480)).toBe('8 minutes');
   });
 });
