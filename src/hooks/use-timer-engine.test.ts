@@ -22,6 +22,12 @@ vi.stubGlobal('sessionStorage', {
   },
 });
 
+// Mock useDeviceId
+vi.mock('@/hooks/use-device-id', () => ({
+  getDeviceId: () => 'mock-device-id',
+  useDeviceId: () => 'mock-device-id',
+}));
+
 // Mock useAuth
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({

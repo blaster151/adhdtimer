@@ -7,6 +7,7 @@ interface PlaybackControlsProps {
   isPaused: boolean;
   isCompleted: boolean;
   isLastStep: boolean;
+  disabled?: boolean;
   onPause: () => void;
   onResume: () => void;
   onSkip: () => void;
@@ -19,6 +20,7 @@ export function PlaybackControls({
   isPaused,
   isCompleted,
   isLastStep,
+  disabled = false,
   onPause,
   onResume,
   onSkip,
@@ -38,6 +40,7 @@ export function PlaybackControls({
             onClick={onPause}
             aria-label="Pause"
             className="min-w-[120px]"
+            disabled={disabled}
           >
             ⏸ Pause
           </Button>
@@ -48,6 +51,7 @@ export function PlaybackControls({
             onClick={onResume}
             aria-label="Resume"
             className="min-w-[120px]"
+            disabled={disabled}
           >
             ▶ Resume
           </Button>
@@ -59,7 +63,7 @@ export function PlaybackControls({
           size="lg"
           onClick={onSkip}
           aria-label="Skip step"
-          disabled={isCompleted}
+          disabled={isCompleted || disabled}
         >
           ⏭ Skip
         </Button>
@@ -70,6 +74,7 @@ export function PlaybackControls({
           size="lg"
           onClick={onStop}
           aria-label="Stop timer"
+          disabled={disabled}
         >
           ⏹ Stop
         </Button>
@@ -83,6 +88,7 @@ export function PlaybackControls({
             size="sm"
             onClick={() => onExtend(60)}
             aria-label="Add 1 minute"
+            disabled={disabled}
           >
             +1 min
           </Button>
@@ -91,6 +97,7 @@ export function PlaybackControls({
             size="sm"
             onClick={() => onExtend(300)}
             aria-label="Add 5 minutes"
+            disabled={disabled}
           >
             +5 min
           </Button>

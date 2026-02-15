@@ -208,4 +208,55 @@ describe('PlaybackControls', () => {
     fireEvent.click(screen.getByLabelText('Add 5 minutes'));
     expect(onExtend).toHaveBeenCalledWith(300);
   });
+
+  it('disables all buttons when disabled prop is true', () => {
+    render(
+      <PlaybackControls
+        isRunning={true}
+        isPaused={false}
+        isCompleted={false}
+        isLastStep={false}
+        disabled={true}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onSkip={vi.fn()}
+        onStop={vi.fn()}
+        onExtend={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Pause')).toBeDisabled();
+    expect(screen.getByLabelText('Skip step')).toBeDisabled();
+    expect(screen.getByLabelText('Stop timer')).toBeDisabled();
+    expect(screen.getByLabelText('Add 1 minute')).toBeDisabled();
+    expect(screen.getByLabelText('Add 5 minutes')).toBeDisabled();
+  });
+
+  it('disabled buttons do not fire handlers', () => {
+    const onPause = vi.fn();
+    const onSkip = vi.fn();
+    const onStop = vi.fn();
+    const onExtend = vi.fn();
+    render(
+      <PlaybackControls
+        isRunning={true}
+        isPaused={false}
+        isCompleted={false}
+        isLastStep={false}
+        disabled={true}
+        onPause={onPause}
+        onResume={vi.fn()}
+        onSkip={onSkip}
+        onStop={onStop}
+        onExtend={onExtend}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Pause'));
+    fireEvent.click(screen.getByLabelText('Skip step'));
+    fireEvent.click(screen.getByLabelText('Stop timer'));
+    fireEvent.click(screen.getByLabelText('Add 1 minute'));
+    expect(onPause).not.toHaveBeenCalled();
+    expect(onSkip).not.toHaveBeenCalled();
+    expect(onStop).not.toHaveBeenCalled();
+    expect(onExtend).not.toHaveBeenCalled();
+  });
 });

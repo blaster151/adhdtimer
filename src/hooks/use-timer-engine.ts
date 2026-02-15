@@ -3,20 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
+import { getDeviceId } from '@/hooks/use-device-id';
 import { createSession, updateSession } from '@/lib/firebase/sessions';
 import { updateTimer } from '@/lib/firebase/timers';
 import type { RunSession, SessionStep, StepStatus } from '@/types/session';
 import type { TimerTemplate } from '@/types/timer';
-
-function getDeviceId(): string {
-  if (typeof window === 'undefined') return 'server';
-  let id = sessionStorage.getItem('adhdtimer-device-id');
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem('adhdtimer-device-id', id);
-  }
-  return id;
-}
 
 export interface TransitionEvent {
   stepName: string;
@@ -43,6 +34,7 @@ export interface UseTimerEngineReturn {
   skip: () => Promise<void>;
   extend: (seconds: number) => Promise<void>;
   stop: () => Promise<void>;
+  updateFromSnapshot: (snapshot: RunSession) => void;
 }
 
 export function useTimerEngine(): UseTimerEngineReturn {
@@ -362,6 +354,35 @@ export function useTimerEngine(): UseTimerEngineReturn {
     setLastTransition(null);
   }, []);
 
+  /**
+   * Update engine state from a Firestore snapshot (observer mode).
+   * Recalculates elapsed times from timestamps without starting a local tick.
+   */
+  const updateFromSnapshot = useCallback((snapshot: RunSession) => {
+    const deviceId = getDeviceId();
+    const isController = snapshot.activeDeviceId === deviceId;
+
+    // Controller device ignores snapshots — it drives local state
+    if (isController) return;
+
+    // Observer mode: replace session state from Firestore data
+    clearTick();
+    setSession(snapshot);
+
+    if (snapshot.status === 'completed') {
+      setElapsedTime(0);
+      setTotalElapsedTime(snapshot.totalElapsedTime);
+      return;
+    }
+
+    const step = snapshot.steps[snapshot.currentStepIndex];
+    if (step) {
+      const stepElapsed = calcStepElapsed(step);
+      setElapsedTime(stepElapsed);
+    }
+    setTotalElapsedTime(calcTotalElapsed(snapshot));
+  }, [clearTick, calcStepElapsed, calcTotalElapsed]);
+
   return {
     session,
     currentStep,
@@ -380,5 +401,6 @@ export function useTimerEngine(): UseTimerEngineReturn {
     skip,
     extend,
     stop,
+    updateFromSnapshot,
   };
 }

@@ -4,6 +4,7 @@ import {
   addDoc,
   getDoc,
   updateDoc,
+  onSnapshot,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './config';
@@ -83,4 +84,29 @@ export async function getSession(
   } catch (err) {
     return { data: null, error: (err as Error).message };
   }
+}
+
+/**
+ * Subscribe to real-time updates for a session document.
+ * Returns an unsubscribe function.
+ */
+export function subscribeToSession(
+  userId: string,
+  sessionId: string,
+  onData: (session: RunSession) => void,
+  onError: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    sessionDoc(userId, sessionId),
+    (snap) => {
+      if (snap.exists()) {
+        onData({ ...snap.data(), id: snap.id } as RunSession);
+      } else {
+        onError(new Error('Session not found'));
+      }
+    },
+    (err) => {
+      onError(err);
+    },
+  );
 }

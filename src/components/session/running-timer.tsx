@@ -3,15 +3,18 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { getSession } from '@/lib/firebase/sessions';
+import { useDeviceId } from '@/hooks/use-device-id';
+import { useFirestoreSession } from '@/hooks/use-firestore-session';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
 import { useTTS } from '@/hooks/use-tts';
 import { useWakeLock } from '@/hooks/use-wake-lock';
+import { updateSession } from '@/lib/firebase/sessions';
 import { PlaybackControls } from '@/components/session/playback-controls';
 import { TransitionOverlay } from '@/components/session/transition-overlay';
 import { ProgressRing } from '@/components/session/progress-ring';
 import { StepDots } from '@/components/session/step-dots';
 import { CompletionView } from '@/components/session/completion-view';
+import { ObserverBanner } from '@/components/session/observer-banner';
 import { calculatePace } from '@/lib/utils/pace';
 import { formatDuration, formatDurationSpeech, formatCountdown } from '@/lib/utils/time';
 import type { SessionStep, StepStatus } from '@/types/session';
@@ -57,13 +60,16 @@ function stepStatusClass(status: StepStatus): string {
 export function RunningTimer({ sessionId }: RunningTimerProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const deviceId = useDeviceId();
   const engine = useTimerEngine();
+  const firestoreSession = useFirestoreSession(user?.uid, sessionId);
   const tts = useTTS();
   const wakeLock = useWakeLock();
   const chimeRef = useRef<HTMLAudioElement | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const lastTransitionTimestamp = useRef<number>(0);
   const hasAnnouncedFirstStep = useRef(false);
+  const hasStartedEngine = useRef(false);
 
   // Pre-load chime audio on mount
   useEffect(() => {
@@ -141,30 +147,33 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     }
   }, [engine.session, engine.isRunning, engine.currentStep, tts]);
 
-  // Load session on mount
+  // Handle real-time session data from Firestore listener
   useEffect(() => {
-    if (!user || engine.session) return;
-
-    async function loadSession() {
-      const { data, error } = await getSession(user!.uid, sessionId);
-      if (error || !data) {
-        toast.error(error ?? 'Session not found');
-        router.push('/app');
-        return;
-      }
-
-      // If session is already completed, redirect
-      if (data.status === 'completed') {
-        router.push('/app');
-        return;
-      }
-
-      // Start the engine from the loaded session
-      await engine.startFromSession(data);
+    if (firestoreSession.error) {
+      toast.error(firestoreSession.error.message ?? 'Session not found');
+      router.push('/app');
+      return;
     }
 
-    loadSession();
-  }, [user, sessionId, engine.session, router]); // eslint-disable-line react-hooks/exhaustive-deps
+    const data = firestoreSession.session;
+    if (!data) return;
+
+    // If session is already completed, redirect
+    if (data.status === 'completed' && !engine.session) {
+      router.push('/app');
+      return;
+    }
+
+    // First load: start the engine from the session data
+    if (!hasStartedEngine.current) {
+      hasStartedEngine.current = true;
+      engine.startFromSession(data);
+      return;
+    }
+
+    // Subsequent snapshots: forward to engine for observer mode updates
+    engine.updateFromSnapshot(data);
+  }, [firestoreSession.session, firestoreSession.error, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cancel TTS on completion
   useEffect(() => {
@@ -200,6 +209,12 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     };
   }, [engine.isRunning, engine.isPaused, engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Take Control handler — must be before early returns (hooks rules)
+  const handleTakeControl = useCallback(async () => {
+    if (!user || !engine.session) return;
+    await updateSession(user.uid, engine.session.id, { activeDeviceId: deviceId });
+  }, [user, engine.session, deviceId]);
+
   if (!engine.session) {
     return (
       <div className="mx-auto max-w-lg space-y-6">
@@ -218,6 +233,9 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   if (isCompleted) {
     return <CompletionView session={session} />;
   }
+
+  const isController = session.activeDeviceId === deviceId;
+  const isObserver = !isController;
 
   const isLastStep = session.currentStepIndex >= session.steps.length - 1;
   const totalPlannedDuration = session.steps.reduce((sum, s) => sum + s.plannedDuration, 0);
@@ -324,12 +342,18 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         );
       })()}
 
+      {/* Observer banner */}
+      {isObserver && (
+        <ObserverBanner onTakeControl={handleTakeControl} />
+      )}
+
       {/* Playback controls */}
       <PlaybackControls
         isRunning={isRunning}
         isPaused={isPaused}
         isCompleted={false}
         isLastStep={isLastStep}
+        disabled={isObserver}
         onPause={engine.pause}
         onResume={engine.resume}
         onSkip={engine.skip}
