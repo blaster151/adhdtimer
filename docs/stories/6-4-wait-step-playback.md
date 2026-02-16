@@ -1,6 +1,6 @@
 # Story 6.4: Wait Step Playback
 
-Status: drafted
+Status: complete
 
 ## Story
 

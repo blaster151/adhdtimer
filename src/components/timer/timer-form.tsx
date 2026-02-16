@@ -36,14 +36,19 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
   const router = useRouter();
   const { user } = useAuth();
 
-  const totalDuration = steps.reduce((sum, s) => sum + s.plannedDuration, 0);
+  const totalDuration = steps.reduce(
+    (sum, s) => (s.type === 'checkpoint' ? sum : sum + s.plannedDuration),
+    0,
+  );
 
   function validate(): string | null {
     if (!name.trim()) return 'Timer name is required.';
     if (steps.length === 0) return 'Add at least one step.';
     for (let i = 0; i < steps.length; i++) {
       if (!steps[i].name.trim()) return `Step ${i + 1} needs a name.`;
-      if (steps[i].plannedDuration <= 0) return `Step ${i + 1} needs a duration greater than 0.`;
+      // Checkpoint steps have zero duration — that's valid
+      if (steps[i].type !== 'checkpoint' && steps[i].plannedDuration <= 0)
+        return `Step ${i + 1} needs a duration greater than 0.`;
     }
     return null;
   }

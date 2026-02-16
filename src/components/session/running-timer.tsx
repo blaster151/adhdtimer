@@ -8,6 +8,7 @@ import { useFirestoreSession } from '@/hooks/use-firestore-session';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
 import { useTTS } from '@/hooks/use-tts';
 import { useWakeLock } from '@/hooks/use-wake-lock';
+import { useCheckpoint } from '@/hooks/use-checkpoint';
 
 import { PlaybackControls } from '@/components/session/playback-controls';
 import { TransitionOverlay } from '@/components/session/transition-overlay';
@@ -17,6 +18,7 @@ import { CompletionView } from '@/components/session/completion-view';
 import { calculatePace } from '@/lib/utils/pace';
 import { formatDuration, formatDurationSpeech, formatCountdown } from '@/lib/utils/time';
 import type { SessionStep, StepStatus } from '@/types/session';
+import type { StepType } from '@/types/timer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
@@ -69,6 +71,54 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   const hasAnnouncedFirstStep = useRef(false);
   const hasStartedEngine = useRef(false);
 
+  // v2: Checkpoint display — detect when engine has a checkpoint to show
+  const checkpointStep = engine.checkpointDisplayIndex !== null
+    ? engine.session?.steps[engine.checkpointDisplayIndex]
+    : null;
+  const checkpoint = useCheckpoint({
+    targetTime: checkpointStep?.targetTime,
+    isActive: engine.checkpointDisplayIndex !== null,
+  });
+  const checkpointAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // v2: Auto-advance past checkpoint after 3.5s display
+  useEffect(() => {
+    if (engine.checkpointDisplayIndex !== null) {
+      // TTS announcement
+      if (checkpointStep && checkpoint.status) {
+        // Play chime
+        if (chimeRef.current) {
+          chimeRef.current.currentTime = 0;
+          chimeRef.current.play()?.catch(() => {});
+        }
+        setTimeout(() => {
+          tts.speak(`${checkpointStep.name}. You're ${checkpoint.status!.message}.`);
+        }, 50);
+      }
+
+      checkpointAdvanceTimer.current = setTimeout(() => {
+        checkpointAdvanceTimer.current = null;
+        engine.advanceFromCheckpoint();
+      }, 3500);
+
+      return () => {
+        if (checkpointAdvanceTimer.current) {
+          clearTimeout(checkpointAdvanceTimer.current);
+          checkpointAdvanceTimer.current = null;
+        }
+      };
+    }
+  }, [engine.checkpointDisplayIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Tap to skip checkpoint display immediately */
+  const handleCheckpointTap = () => {
+    if (checkpointAdvanceTimer.current) {
+      clearTimeout(checkpointAdvanceTimer.current);
+      checkpointAdvanceTimer.current = null;
+    }
+    engine.advanceFromCheckpoint();
+  };
+
   // Pre-load chime audio on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -98,7 +148,8 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       const step = engine.session?.steps[engine.session.currentStepIndex];
       if (step) {
         const ttsTimer = setTimeout(() => {
-          tts.speak(`${step.name}. ${formatDurationSpeech(step.plannedDuration)}.`);
+          const waitSuffix = step.type === 'wait' ? ' Waiting.' : '';
+          tts.speak(`${step.name}. ${formatDurationSpeech(step.plannedDuration)}.${waitSuffix}`);
         }, 50);
         // Clean up TTS timer on unmount
         const overlayTimer = setTimeout(() => {
@@ -138,8 +189,9 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         chimeRef.current.play()?.catch(() => {});
       }
       setTimeout(() => {
+        const waitSuffix = engine.currentStep!.type === 'wait' ? ' Waiting.' : '';
         tts.speak(
-          `${engine.currentStep!.name}. ${formatDurationSpeech(engine.currentStep!.plannedDuration)}.`,
+          `${engine.currentStep!.name}. ${formatDurationSpeech(engine.currentStep!.plannedDuration)}.${waitSuffix}`,
         );
       }, 50);
     }
@@ -303,11 +355,37 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       </div>
 
       {/* Zen Ring — hero visual */}
-      {currentStep && (
+      {engine.checkpointDisplayIndex !== null && checkpointStep ? (
+        <div
+          onClick={handleCheckpointTap}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCheckpointTap(); }}
+          aria-label="Tap to continue past checkpoint"
+          className="cursor-pointer"
+          data-testid="checkpoint-display"
+        >
+          <ProgressRing
+            stepProgress={1}
+            totalProgress={totalProgress}
+            stepName={`🎯 ${checkpointStep.name}`}
+            elapsedDisplay={checkpoint.status?.message ?? ''}
+            paceMessage="Tap to continue"
+            paceStatus={checkpoint.status?.status === 'behind' ? 'behind' : 'on-track'}
+            isOverrun={false}
+            isPaused={false}
+            stepNumber={(engine.checkpointDisplayIndex ?? 0) + 1}
+            totalSteps={session.steps.length}
+            timerName={session.timerName}
+            ariaElapsedLabel={`Checkpoint: ${checkpoint.status?.message ?? 'checking'}`}
+            stepType="checkpoint"
+          />
+        </div>
+      ) : currentStep ? (
         <ProgressRing
           stepProgress={stepProgress}
           totalProgress={totalProgress}
-          stepName={currentStep.name}
+          stepName={currentStep.type === 'wait' ? `⏳ ${currentStep.name}` : currentStep.name}
           elapsedDisplay={elapsedDisplay}
           paceMessage={pace.message}
           paceStatus={pace.status}
@@ -317,8 +395,10 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
           totalSteps={session.steps.length}
           timerName={session.timerName}
           ariaElapsedLabel={ariaElapsedLabel}
+          stepType={currentStep.type}
+          waitMessage={currentStep.type === 'wait' ? 'Waiting...' : undefined}
         />
-      )}
+      ) : null}
 
       {/* Step dots */}
       <StepDots steps={session.steps} currentIndex={session.currentStepIndex} />
@@ -330,6 +410,9 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
           session.currentStepIndex,
           elapsedTime,
         );
+        // Determine previous step type for transition message
+        const prevStepIndex = session.currentStepIndex - 1;
+        const previousStepType = prevStepIndex >= 0 ? session.steps[prevStepIndex].type : undefined;
         return (
           <TransitionOverlay
             stepName={engine.lastTransition.stepName}
@@ -338,6 +421,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
             paceMessage={transitionPace.message}
             paceStatus={transitionPace.status}
             visible={overlayVisible}
+            previousStepType={previousStepType}
           />
         );
       })()}

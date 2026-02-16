@@ -27,6 +27,8 @@ export interface UseTimerEngineReturn {
   isCompleted: boolean;
   lastTransition: TransitionEvent | null;
   clearTransition: () => void;
+  checkpointDisplayIndex: number | null; // v2 — index of checkpoint being displayed
+  advanceFromCheckpoint: () => Promise<void>; // v2 — UI calls after 3.5s display
   start: (template: TimerTemplate) => Promise<void>;
   startFromSession: (existingSession: RunSession) => Promise<void>;
   pause: () => Promise<void>;
@@ -43,6 +45,7 @@ export function useTimerEngine(): UseTimerEngineReturn {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [totalElapsedTime, setTotalElapsedTime] = useState(0);
   const [lastTransition, setLastTransition] = useState<TransitionEvent | null>(null);
+  const [checkpointDisplayIndex, setCheckpointDisplayIndex] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionRef = useRef<RunSession | null>(null);
 
@@ -127,6 +130,40 @@ export function useTimerEngine(): UseTimerEngineReturn {
       status: 'running',
       startedAt: now,
     };
+
+    // v2: If next step is a checkpoint, instantly complete it and pause for display
+    if (steps[nextIdx].type === 'checkpoint') {
+      steps[nextIdx] = {
+        ...steps[nextIdx],
+        status: 'completed',
+        completedAt: now,
+        elapsedTime: 0,
+      };
+
+      const checkpointSession: RunSession = {
+        ...sess,
+        steps,
+        currentStepIndex: nextIdx,
+        totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+
+      setSession(checkpointSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(checkpointSession.totalElapsedTime);
+      setCheckpointDisplayIndex(nextIdx);
+
+      // Fire transition for chime/overlay
+      setLastTransition({
+        stepName: steps[nextIdx].name,
+        stepNumber: nextIdx + 1,
+        totalSteps: steps.length,
+        timestamp: Date.now(),
+      });
+
+      await persistSession(checkpointSession);
+      // Don't start tick — UI will call advanceFromCheckpoint after display
+      return;
+    }
 
     const updatedSession: RunSession = {
       ...sess,
@@ -387,6 +424,17 @@ export function useTimerEngine(): UseTimerEngineReturn {
     await advanceStepRef.current?.(sess, 'skipped');
   }, []);
 
+  // v2: Advance past a checkpoint display — called by UI after 3.5s or on tap
+  const advanceFromCheckpoint = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || checkpointDisplayIndex === null) return;
+
+    setCheckpointDisplayIndex(null);
+
+    // The checkpoint step is already completed — advance to the next step
+    await advanceStepRef.current?.(sess, 'completed');
+  }, [checkpointDisplayIndex]);
+
   const extend = useCallback(async (seconds: number) => {
     const sess = sessionRef.current;
     if (!sess) return;
@@ -496,11 +544,13 @@ export function useTimerEngine(): UseTimerEngineReturn {
     isCompleted: session?.status === 'completed',
     lastTransition,
     clearTransition,
+    checkpointDisplayIndex,
     start,
     startFromSession,
     pause,
     resume,
     skip,
+    advanceFromCheckpoint,
     extend,
     stop,
     updateFromSnapshot,

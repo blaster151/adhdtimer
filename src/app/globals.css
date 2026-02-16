@@ -31,6 +31,8 @@
   --behind: #D4A96A;
   --warning: #C47A6C;
   --info: #6B94B8;
+  --wait: #6B94B8;
+  --checkpoint: #C9A84C;
 
   /* Zen Ring */
   --ring-glow: rgba(126, 189, 115, 0.35);
@@ -137,8 +139,41 @@ body {
   transition: stroke-dashoffset 1s linear;
 }
 
+/* Breathing animation for active steps */
+@keyframes ring-breathe {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.ring-breathing {
+  animation: ring-breathe 4s ease-in-out infinite;
+}
+
+/* Slower breathing for Wait steps (2x) */
+.ring-breathing-slow {
+  animation: ring-breathe 8s ease-in-out infinite;
+}
+
+/* Checkpoint flash — gold pulse on activation */
+@keyframes checkpoint-flash {
+  0% { opacity: 0; }
+  20% { opacity: 0.2; }
+  100% { opacity: 0; }
+}
+
+.checkpoint-flash {
+  animation: checkpoint-flash 800ms ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ring-progress {
     transition: none;
+  }
+  .ring-breathing,
+  .ring-breathing-slow {
+    animation: none;
+  }
+  .checkpoint-flash {
+    animation: none;
   }
 }

@@ -1,6 +1,6 @@
 # Story 6.2: Checkpoint Utility Functions
 
-Status: drafted
+Status: complete
 
 ## Story
 

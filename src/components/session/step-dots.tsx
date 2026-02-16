@@ -18,19 +18,23 @@ export function StepDots({ steps, currentIndex }: StepDotsProps) {
       {steps.map((step, i) => {
         let dotClass: string;
         let label: string;
+        const isCheckpoint = step.type === 'checkpoint';
 
         if (step.status === 'completed') {
-          dotClass = 'h-2.5 w-2.5 rounded-full bg-primary';
+          const isWaitStep = step.type === 'wait';
+          const colorClass = isCheckpoint ? 'bg-[var(--checkpoint)]' : isWaitStep ? 'bg-[var(--wait)]' : 'bg-primary';
+          dotClass = `h-2.5 w-2.5 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} ${colorClass}`;
           label = `Step ${i + 1}: ${step.name} (completed)`;
         } else if (step.status === 'skipped') {
-          dotClass = 'h-2.5 w-2.5 rounded-full bg-muted-foreground opacity-50';
+          dotClass = `h-2.5 w-2.5 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} bg-muted-foreground opacity-50`;
           label = `Step ${i + 1}: ${step.name} (skipped)`;
         } else if (i === currentIndex) {
-          dotClass =
-            'h-3 w-3 rounded-full border-2 border-primary bg-transparent';
+          const isWaitStep = step.type === 'wait';
+          const borderClass = isCheckpoint ? 'border-[var(--checkpoint)]' : isWaitStep ? 'border-[var(--wait)]' : 'border-primary';
+          dotClass = `h-3 w-3 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} border-2 ${borderClass} bg-transparent`;
           label = `Step ${i + 1}: ${step.name} (current)`;
         } else {
-          dotClass = 'h-2.5 w-2.5 rounded-full bg-muted-foreground/30';
+          dotClass = `h-2.5 w-2.5 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} bg-muted-foreground/30`;
           label = `Step ${i + 1}: ${step.name} (upcoming)`;
         }
 

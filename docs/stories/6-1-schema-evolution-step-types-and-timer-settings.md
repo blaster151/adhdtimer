@@ -1,6 +1,6 @@
 # Story 6.1: Schema Evolution — Step Types & Timer Settings
 
-Status: drafted
+Status: complete
 
 ## Story
 

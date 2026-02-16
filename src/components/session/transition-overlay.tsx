@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PaceStatus } from '@/lib/utils/pace';
+import type { StepType } from '@/types/timer';
 
 interface TransitionOverlayProps {
   stepName: string;
@@ -10,6 +11,7 @@ interface TransitionOverlayProps {
   paceMessage: string;
   paceStatus: PaceStatus;
   visible: boolean;
+  previousStepType?: StepType; // v2 — for 'Done waiting' message
 }
 
 function paceColorClass(status: PaceStatus): string {
@@ -30,6 +32,7 @@ export function TransitionOverlay({
   paceMessage,
   paceStatus,
   visible,
+  previousStepType,
 }: TransitionOverlayProps) {
   const [show, setShow] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
@@ -83,7 +86,9 @@ export function TransitionOverlay({
           Step {stepNumber} of {totalSteps}
         </p>
         <p className="mt-2 text-xl font-semibold text-foreground">
-          Time to start {stepName}
+          {previousStepType === 'wait'
+            ? `Done waiting. Next: ${stepName}`
+            : `Time to start ${stepName}`}
         </p>
         <p className={`mt-2 text-sm font-medium ${paceColorClass(paceStatus)}`}>
           {paceMessage}

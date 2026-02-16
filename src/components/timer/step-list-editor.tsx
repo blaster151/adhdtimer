@@ -60,7 +60,15 @@ export function StepListEditor({ steps, onChange }: StepListEditorProps) {
 
   function updateStep(id: string, field: keyof Step, value: string | number) {
     onChange(
-      steps.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
+      steps.map((s) => {
+        if (s.id !== id) return s;
+        // Handle clearing targetTime by converting empty string to undefined
+        if (field === 'targetTime' && value === '') {
+          const { targetTime, ...rest } = s;
+          return rest;
+        }
+        return { ...s, [field]: value };
+      }),
     );
   }
 

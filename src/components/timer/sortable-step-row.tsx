@@ -6,6 +6,8 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Step } from '@/types/timer';
 import { parseDuration, formatDuration } from '@/lib/utils/time';
 import { useSwipeAdjust } from '@/hooks/use-swipe-adjust';
+import { StepTypeSelector } from '@/components/timer/step-type-selector';
+import { CheckpointTimePicker } from '@/components/timer/checkpoint-time-picker';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -133,7 +135,31 @@ export function SortableStepRow({
         required
       />
 
-      {/* Duration — swipeable or editable */}
+      {/* Step type selector */}
+      <StepTypeSelector
+        value={step.type}
+        onChange={(type) => {
+          onUpdate(step.id, 'type', type);
+          if (type === 'checkpoint') {
+            // Clear duration when switching to checkpoint
+            onUpdate(step.id, 'plannedDuration', 0);
+          } else if (step.type === 'checkpoint') {
+            // Restore default duration when switching away from checkpoint
+            onUpdate(step.id, 'plannedDuration', 300);
+            onUpdate(step.id, 'targetTime', '');
+          }
+        }}
+        stepName={step.name}
+      />
+
+      {/* Duration or Checkpoint time picker */}
+      {step.type === 'checkpoint' ? (
+        <CheckpointTimePicker
+          value={step.targetTime}
+          onChange={(targetTime) => onUpdate(step.id, 'targetTime', targetTime)}
+          stepIndex={index}
+        />
+      ) : (
       <div className="flex shrink-0 items-center gap-1">
         {isEditing ? (
           <Input
@@ -171,6 +197,7 @@ export function SortableStepRow({
         )}
         <span className="text-xs text-muted-foreground">min</span>
       </div>
+      )}
 
       {/* Remove button */}
       <Button

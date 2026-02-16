@@ -1,6 +1,7 @@
 'use client';
 
 import type { PaceStatus } from '@/lib/utils/pace';
+import type { StepType } from '@/types/timer';
 
 interface ProgressRingProps {
   stepProgress: number; // 0–1 (clamped to 1 when overrunning)
@@ -15,6 +16,8 @@ interface ProgressRingProps {
   totalSteps: number;
   timerName: string;
   ariaElapsedLabel: string; // e.g. "5 minutes 23 seconds elapsed"
+  stepType?: StepType; // v2 — defaults to 'active' when missing
+  waitMessage?: string; // v2 — e.g. "Waiting..."
 }
 
 // Radii from tech spec
@@ -50,8 +53,17 @@ export function ProgressRing({
   totalSteps,
   timerName,
   ariaElapsedLabel,
+  stepType,
+  waitMessage,
 }: ProgressRingProps) {
-  const color = paceColor(isOverrun ? 'behind' : paceStatus);
+  const isWait = stepType === 'wait';
+  const isCheckpoint = stepType === 'checkpoint';
+  const color = isCheckpoint
+    ? 'var(--checkpoint)'
+    : isWait
+      ? 'var(--wait)'
+      : paceColor(isOverrun ? 'behind' : paceStatus);
+  const breathingClass = isWait ? 'ring-breathing-slow' : 'ring-breathing';
 
   // Clamp progress 0–1
   const clampedStep = Math.min(Math.max(stepProgress, 0), 1);
@@ -64,7 +76,7 @@ export function ProgressRing({
 
   return (
     <div
-      className="mx-auto w-[260px] sm:w-[280px] lg:w-[300px]"
+      className={`mx-auto w-[260px] sm:w-[280px] lg:w-[300px] relative ${isCheckpoint ? 'checkpoint-flash' : ''}`}
       data-testid="progress-ring-container"
     >
       <svg
@@ -122,7 +134,7 @@ export function ProgressRing({
           strokeDashoffset={innerOffset}
           strokeLinecap="round"
           transform={`rotate(-90 ${CENTER} ${CENTER})`}
-          className="ring-progress"
+          className={`ring-progress ${!isPaused ? breathingClass : ''}`}
           style={{ willChange: 'stroke-dashoffset' }}
           data-testid="inner-progress"
         />
@@ -144,6 +156,16 @@ export function ProgressRing({
           >
             {elapsedDisplay}
           </tspan>
+          {waitMessage ? (
+            <tspan
+              x={CENTER}
+              y={isPaused ? 175 : 180}
+              className="text-[0.75rem] fill-muted-foreground"
+              data-testid="ring-wait-message"
+            >
+              {waitMessage}
+            </tspan>
+          ) : (
           <tspan
             x={CENTER}
             y={isPaused ? 175 : 180}
@@ -153,6 +175,7 @@ export function ProgressRing({
           >
             {paceMessage}
           </tspan>
+          )}
           {isPaused && (
             <tspan
               x={CENTER}

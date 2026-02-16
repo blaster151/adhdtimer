@@ -80,6 +80,8 @@ export async function createSession(
       originalPlannedDuration: step.plannedDuration,
       elapsedTime: 0,
       status: 'pending',
+      ...(step.type && { type: step.type }),
+      ...(step.targetTime && { targetTime: step.targetTime }),
     }));
 
     const sessionData: Omit<RunSession, 'id'> = {

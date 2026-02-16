@@ -1,6 +1,6 @@
 # Story 6.3: Step Type Selector in Timer Editor
 
-Status: drafted
+Status: complete
 
 ## Story
 
