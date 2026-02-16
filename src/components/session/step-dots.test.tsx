@@ -88,4 +88,16 @@ describe('StepDots', () => {
     expect(dot1.className).toContain('border-2');
     expect(dot1.className).toContain('border-primary');
   });
+
+  it('deferred dot uses --deferred color with dimmed opacity', () => {
+    const stepsWithDeferred: SessionStep[] = [
+      makeStep({ id: 's1', name: 'Shower', status: 'completed', elapsedTime: 290 }),
+      makeStep({ id: 's2', name: 'Dress', status: 'deferred' }),
+      makeStep({ id: 's3', name: 'Breakfast', status: 'running', elapsedTime: 60 }),
+    ];
+    render(<StepDots steps={stepsWithDeferred} currentIndex={2} />);
+    const dot1 = screen.getByTestId('step-dot-1');
+    expect(dot1.getAttribute('aria-label')).toContain('deferred');
+    expect(dot1.className).toContain('opacity-40');
+  });
 });

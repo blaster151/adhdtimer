@@ -265,4 +265,77 @@ describe('CompletionView', () => {
     render(<CompletionView session={session} />);
     expect(screen.getByTestId('steps-completed')).toHaveTextContent('1 step completed');
   });
+
+  it('shows deferred summary when steps were deferred', () => {
+    const session = makeSession({
+      steps: [
+        {
+          id: 's1',
+          name: 'Shower',
+          plannedDuration: 480,
+          originalPlannedDuration: 480,
+          elapsedTime: 503,
+          status: 'completed',
+          wasDeferred: true,
+        },
+        {
+          id: 's2',
+          name: 'Get Dressed',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'skipped',
+          wasDeferred: true,
+        },
+        {
+          id: 's3',
+          name: 'Breakfast',
+          plannedDuration: 600,
+          originalPlannedDuration: 600,
+          elapsedTime: 580,
+          status: 'completed',
+        },
+      ],
+    });
+    render(<CompletionView session={session} />);
+    const summary = screen.getByTestId('deferred-summary');
+    expect(summary).toHaveTextContent('2 steps deferred');
+    expect(summary).toHaveTextContent('1 completed later');
+    expect(summary).toHaveTextContent('1 skipped');
+  });
+
+  it('does not show deferred summary when no steps were deferred', () => {
+    const session = makeSession();
+    render(<CompletionView session={session} />);
+    expect(screen.queryByTestId('deferred-summary')).not.toBeInTheDocument();
+  });
+
+  it('shows ↩ prefix for deferred steps in breakdown', () => {
+    const session = makeSession({
+      steps: [
+        {
+          id: 's1',
+          name: 'Shower',
+          plannedDuration: 480,
+          originalPlannedDuration: 480,
+          elapsedTime: 503,
+          status: 'completed',
+          wasDeferred: true,
+        },
+        {
+          id: 's2',
+          name: 'Breakfast',
+          plannedDuration: 600,
+          originalPlannedDuration: 600,
+          elapsedTime: 580,
+          status: 'completed',
+        },
+      ],
+    });
+    render(<CompletionView session={session} />);
+    const step1 = screen.getByTestId('completion-step-s1');
+    expect(step1).toHaveTextContent('↩ Shower');
+    const step2 = screen.getByTestId('completion-step-s2');
+    expect(step2).not.toHaveTextContent('↩');
+  });
 });

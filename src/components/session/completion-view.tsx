@@ -16,6 +16,9 @@ interface CompletionStats {
   stepsSkipped: number;
   deltaSeconds: number; // positive = ahead, negative = behind
   paceMessage: string;
+  deferredCount: number;       // steps that were deferred at any point
+  deferredCompleted: number;   // deferred steps eventually completed
+  deferredSkipped: number;     // deferred steps skipped during resolution
 }
 
 function calculateCompletionStats(session: RunSession): CompletionStats {
@@ -23,6 +26,9 @@ function calculateCompletionStats(session: RunSession): CompletionStats {
   let totalPlannedTime = 0;
   let stepsCompleted = 0;
   let stepsSkipped = 0;
+  let deferredCount = 0;
+  let deferredCompleted = 0;
+  let deferredSkipped = 0;
 
   for (const step of session.steps) {
     totalPlannedTime += step.originalPlannedDuration;
@@ -31,6 +37,16 @@ function calculateCompletionStats(session: RunSession): CompletionStats {
       stepsCompleted++;
     } else if (step.status === 'skipped') {
       stepsSkipped++;
+    }
+
+    // Track deferred steps via wasDeferred flag
+    if (step.wasDeferred) {
+      deferredCount++;
+      if (step.status === 'completed') {
+        deferredCompleted++;
+      } else if (step.status === 'skipped') {
+        deferredSkipped++;
+      }
     }
   }
 
@@ -59,6 +75,9 @@ function calculateCompletionStats(session: RunSession): CompletionStats {
     stepsSkipped,
     deltaSeconds: delta,
     paceMessage,
+    deferredCount,
+    deferredCompleted,
+    deferredSkipped,
   };
 }
 
@@ -117,6 +136,18 @@ export function CompletionView({ session }: CompletionViewProps) {
         )}
       </div>
 
+      {/* Deferred summary — only shown when steps were deferred */}
+      {stats.deferredCount > 0 && (
+        <p
+          className="text-center text-xs text-muted-foreground"
+          data-testid="deferred-summary"
+        >
+          {stats.deferredCount} step{stats.deferredCount === 1 ? '' : 's'} deferred
+          {stats.deferredCompleted > 0 && `, ${stats.deferredCompleted} completed later`}
+          {stats.deferredSkipped > 0 && `, ${stats.deferredSkipped} skipped`}
+        </p>
+      )}
+
       {/* Step breakdown */}
       <div className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">Steps</h2>
@@ -137,6 +168,8 @@ export function CompletionView({ session }: CompletionViewProps) {
                 <span className="w-5 text-center">
                   {step.status === 'skipped' ? (
                     <span className="text-muted-foreground">⊘</span>
+                  ) : step.status === 'deferred' ? (
+                    <span className="text-muted-foreground">↩</span>
                   ) : (
                     <span className="text-primary">✓</span>
                   )}
@@ -144,15 +177,17 @@ export function CompletionView({ session }: CompletionViewProps) {
 
                 {/* Step name */}
                 <span
-                  className={`flex-1 ${step.status === 'skipped' ? 'text-muted-foreground' : 'text-foreground'}`}
+                  className={`flex-1 ${step.status === 'skipped' || step.status === 'deferred' ? 'text-muted-foreground' : 'text-foreground'}`}
                 >
-                  {step.name}
+                  {step.wasDeferred ? `↩ ${step.name}` : step.name}
                 </span>
 
                 {/* Time info */}
                 <span className="text-xs tabular-nums text-muted-foreground">
                   {step.status === 'skipped' ? (
                     <span className="italic">skipped</span>
+                  ) : step.status === 'deferred' ? (
+                    <span className="italic">deferred</span>
                   ) : (
                     <>
                       {formatDuration(step.elapsedTime)} / {formatDuration(step.originalPlannedDuration)}

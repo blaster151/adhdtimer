@@ -688,4 +688,844 @@ describe('useTimerEngine', () => {
     expect(result.current.session?.currentStepIndex).toBe(0);
     expect(result.current.elapsedTime).toBe(120);
   });
+
+  // ---- v2: waiting-for-advance tests ----
+
+  it('enters waiting-for-advance when pauseBetweenSteps is true', async () => {
+    const template = makeTemplate(2);
+    template.pauseBetweenSteps = true;
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.session?.pauseBetweenSteps).toBe(true);
+
+    // Simulate step completion — advance to step 2
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    // Should be in waiting-for-advance
+    expect(result.current.isWaitingForAdvance).toBe(true);
+    expect(result.current.session?.status).toBe('waiting-for-advance');
+    expect(result.current.nextStepName).toBe('Step 2');
+  });
+
+  it('time does NOT tick during waiting-for-advance', async () => {
+    const template = makeTemplate(2);
+    template.pauseBetweenSteps = true;
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isWaitingForAdvance).toBe(true);
+    const elapsedBefore = result.current.elapsedTime;
+
+    // Advance time
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    // Elapsed should NOT have changed
+    expect(result.current.elapsedTime).toBe(elapsedBefore);
+  });
+
+  it('advanceFromWaiting resumes running state', async () => {
+    const template = makeTemplate(2);
+    template.pauseBetweenSteps = true;
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isWaitingForAdvance).toBe(true);
+
+    // Now user taps Start
+    await act(async () => {
+      await result.current.advanceFromWaiting();
+    });
+
+    expect(result.current.isWaitingForAdvance).toBe(false);
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.session?.status).toBe('running');
+    expect(result.current.session?.steps[1].status).toBe('running');
+  });
+
+  it('does NOT enter waiting-for-advance for last step', async () => {
+    // Use single-step template
+    const template = makeTemplate(1);
+    template.pauseBetweenSteps = true;
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    // Should complete, not wait
+    expect(result.current.isWaitingForAdvance).toBe(false);
+    expect(result.current.isCompleted).toBe(true);
+  });
+
+  it('hydrates waiting-for-advance from Firestore session', async () => {
+    const waitingSession: RunSession = {
+      id: 'session-123',
+      timerId: 'timer-1',
+      timerName: 'Test Timer',
+      status: 'waiting-for-advance',
+      currentStepIndex: 1,
+      startedAt: Timestamp.now(),
+      activeDeviceId: 'mock-device-id',
+      totalElapsedTime: 300,
+      pauseBetweenSteps: true,
+      steps: [
+        {
+          id: 'step-0',
+          name: 'Step 1',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 300,
+          status: 'completed' as const,
+          completedAt: Timestamp.now(),
+        },
+        {
+          id: 'step-1',
+          name: 'Step 2',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'pending' as const,
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(waitingSession);
+    });
+
+    expect(result.current.isWaitingForAdvance).toBe(true);
+    expect(result.current.nextStepName).toBe('Step 2');
+    expect(result.current.elapsedTime).toBe(0);
+  });
+
+  // === Defer Tests (Story 7.3) ===
+
+  it('defer marks step as deferred and advances to next step', async () => {
+    const template = makeTemplate(3);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    expect(result.current.currentStepIndex).toBe(0);
+    expect(result.current.isRunning).toBe(true);
+
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // Step 0 should be deferred
+    expect(result.current.session?.steps[0].status).toBe('deferred');
+    expect(result.current.session?.steps[0].wasDeferred).toBe(true);
+    // Should advance to step 1
+    expect(result.current.currentStepIndex).toBe(1);
+    expect(result.current.session?.steps[1].status).toBe('running');
+    // deferredSteps should contain step-0
+    expect(result.current.session?.deferredSteps).toEqual(['step-0']);
+    expect(result.current.deferredCount).toBe(1);
+  });
+
+  it('defer appends to deferredSteps on each deferral', async () => {
+    const template = makeTemplate(4);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    expect(result.current.session?.deferredSteps).toEqual(['step-0']);
+    expect(result.current.currentStepIndex).toBe(1);
+
+    // Defer step 1
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    expect(result.current.session?.deferredSteps).toEqual(['step-0', 'step-1']);
+    expect(result.current.currentStepIndex).toBe(2);
+    expect(result.current.deferredCount).toBe(2);
+  });
+
+  it('defer with pauseBetweenSteps enters waiting-for-advance', async () => {
+    const template = makeTemplate(3);
+    template.pauseBetweenSteps = true;
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        pauseBetweenSteps: true,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // Should enter waiting-for-advance for step 1
+    expect(result.current.isWaitingForAdvance).toBe(true);
+    expect(result.current.session?.status).toBe('waiting-for-advance');
+    expect(result.current.session?.steps[0].status).toBe('deferred');
+    expect(result.current.session?.deferredSteps).toEqual(['step-0']);
+  });
+
+  it('defer enters deferred resolution when all remaining steps are deferred', async () => {
+    const template = makeTemplate(2);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // Now on step 1, defer it too
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // All steps deferred — should enter deferred resolution, not complete
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.session?.status).toBe('resolving-deferred');
+    expect(result.current.currentDeferredStep).not.toBeNull();
+    expect(result.current.currentDeferredStep?.id).toBe('step-0');
+  });
+
+  it('defer skips over already-deferred steps when finding next', async () => {
+    // Start a 4-step session, manually defer step 1 first, then defer step 0
+    const template = makeTemplate(4);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0 → goes to step 1
+    await act(async () => {
+      await result.current.defer();
+    });
+    expect(result.current.currentStepIndex).toBe(1);
+
+    // Defer step 1 → should skip deferred step 0 if looking back, goes to step 2
+    await act(async () => {
+      await result.current.defer();
+    });
+    expect(result.current.currentStepIndex).toBe(2);
+    expect(result.current.session?.steps[2].status).toBe('running');
+    expect(result.current.deferredCount).toBe(2);
+  });
+
+  // === Deferred Resolution Tests (Story 7.4) ===
+
+  it('enters deferred resolution after last main step completes', async () => {
+    const template = makeTemplate(2);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0 → goes to step 1
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // Skip step 1 → last main step done, should enter deferred resolution
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.currentDeferredStep).not.toBeNull();
+    expect(result.current.currentDeferredStep?.id).toBe('step-0');
+    expect(result.current.session?.status).toBe('resolving-deferred');
+  });
+
+  it('startDeferredStep starts the deferred step normally', async () => {
+    const template = makeTemplate(2);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0, skip step 1 → enters deferred resolution
+    await act(async () => {
+      await result.current.defer();
+    });
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+
+    // Start the deferred step
+    await act(async () => {
+      await result.current.startDeferredStep();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(false);
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.session?.steps[0].status).toBe('running');
+  });
+
+  it('skipDeferredStep skips and completes when no more deferred steps', async () => {
+    const template = makeTemplate(2);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0, skip step 1 → enters deferred resolution
+    await act(async () => {
+      await result.current.defer();
+    });
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+
+    // Skip the deferred step
+    await act(async () => {
+      await result.current.skipDeferredStep();
+    });
+
+    // No more deferred steps → should complete
+    expect(result.current.isCompleted).toBe(true);
+    expect(result.current.isResolvingDeferred).toBe(false);
+    expect(result.current.session?.steps[0].status).toBe('skipped');
+  });
+
+  it('deferAgain re-appends step and presents it again if only one', async () => {
+    const template = makeTemplate(2);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0, skip step 1 → enters deferred resolution
+    await act(async () => {
+      await result.current.defer();
+    });
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.currentDeferredStep?.id).toBe('step-0');
+
+    // Defer again → should re-append and present again (only deferred step)
+    await act(async () => {
+      await result.current.deferAgain();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.currentDeferredStep?.id).toBe('step-0');
+  });
+
+  it('skipDeferredStep presents next deferred step when multiple exist', async () => {
+    const template = makeTemplate(3);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0 → goes to step 1
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // Defer step 1 → goes to step 2
+    await act(async () => {
+      await result.current.defer();
+    });
+
+    // Skip step 2 → enters deferred resolution with step-0
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.currentDeferredStep?.id).toBe('step-0');
+
+    // Skip step-0 → should present step-1
+    await act(async () => {
+      await result.current.skipDeferredStep();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.currentDeferredStep?.id).toBe('step-1');
+
+    // Skip step-1 → should complete
+    await act(async () => {
+      await result.current.skipDeferredStep();
+    });
+
+    expect(result.current.isCompleted).toBe(true);
+    expect(result.current.isResolvingDeferred).toBe(false);
+  });
+
+  it('deferred step that completes returns to resolution or completes session', async () => {
+    const template = makeTemplate(2);
+    const sessionSteps = template.steps.map((s) => ({
+      ...s,
+      originalPlannedDuration: s.plannedDuration,
+      elapsedTime: 0,
+      status: 'pending' as const,
+    }));
+
+    mockCreateSession.mockResolvedValueOnce({
+      data: {
+        id: 'session-123',
+        timerId: template.id,
+        timerName: template.name,
+        status: 'idle',
+        currentStepIndex: 0,
+        startedAt: Timestamp.now(),
+        activeDeviceId: 'mock-device-id',
+        totalElapsedTime: 0,
+        countdownMode: false,
+        steps: sessionSteps,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.start(template);
+    });
+
+    // Defer step 0, skip step 1 → enters deferred resolution
+    await act(async () => {
+      await result.current.defer();
+    });
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+
+    // Start the deferred step
+    await act(async () => {
+      await result.current.startDeferredStep();
+    });
+
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.session?.steps[0].status).toBe('running');
+
+    // Skip the running deferred step (simulates completion) → should complete since no more deferred
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    // Deferred step should have been skipped and session should be complete
+    expect(result.current.isCompleted).toBe(true);
+    expect(result.current.session?.steps[0].status).toBe('skipped');
+  });
+
+  it('hydrates resolving-deferred from Firestore session', async () => {
+    const resolvingSession: RunSession = {
+      id: 'session-123',
+      timerId: 'timer-1',
+      timerName: 'Test Timer',
+      status: 'resolving-deferred' as RunSession['status'],
+      currentStepIndex: 0,
+      startedAt: Timestamp.now(),
+      activeDeviceId: 'mock-device-id',
+      totalElapsedTime: 300,
+      steps: [
+        {
+          id: 'step-0',
+          name: 'Step 1',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'pending' as const,
+          wasDeferred: true,
+        },
+        {
+          id: 'step-1',
+          name: 'Step 2',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 300,
+          status: 'completed' as const,
+          completedAt: Timestamp.now(),
+        },
+      ],
+      deferredSteps: [],
+    };
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(resolvingSession);
+    });
+
+    expect(result.current.isResolvingDeferred).toBe(true);
+    expect(result.current.currentDeferredStep?.id).toBe('step-0');
+  });
 });

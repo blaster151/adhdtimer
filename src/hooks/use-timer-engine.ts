@@ -29,6 +29,17 @@ export interface UseTimerEngineReturn {
   clearTransition: () => void;
   checkpointDisplayIndex: number | null; // v2 — index of checkpoint being displayed
   advanceFromCheckpoint: () => Promise<void>; // v2 — UI calls after 3.5s display
+  isWaitingForAdvance: boolean; // v2 — paused between steps, waiting for user tap
+  nextStepName: string | null; // v2 — name of the pending step during waiting-for-advance
+  advanceFromWaiting: () => Promise<void>; // v2 — user taps Start to begin next step
+  skipFromWaiting: () => Promise<void>; // v2 — user taps Skip during waiting-for-advance
+  defer: () => Promise<void>; // v2 — defer current step to later
+  deferredCount: number; // v2 — number of steps in deferred queue
+  isResolvingDeferred: boolean; // v2 — presenting deferred steps for resolution
+  currentDeferredStep: SessionStep | null; // v2 — the deferred step being presented
+  startDeferredStep: () => Promise<void>; // v2 — start the presented deferred step
+  skipDeferredStep: () => Promise<void>; // v2 — skip the presented deferred step
+  deferAgain: () => Promise<void>; // v2 — re-defer the presented step to end of queue
   start: (template: TimerTemplate) => Promise<void>;
   startFromSession: (existingSession: RunSession) => Promise<void>;
   pause: () => Promise<void>;
@@ -46,6 +57,9 @@ export function useTimerEngine(): UseTimerEngineReturn {
   const [totalElapsedTime, setTotalElapsedTime] = useState(0);
   const [lastTransition, setLastTransition] = useState<TransitionEvent | null>(null);
   const [checkpointDisplayIndex, setCheckpointDisplayIndex] = useState<number | null>(null);
+  const [isWaitingForAdvance, setIsWaitingForAdvance] = useState(false);
+  const [isResolvingDeferred, setIsResolvingDeferred] = useState(false);
+  const [currentDeferredStep, setCurrentDeferredStep] = useState<SessionStep | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionRef = useRef<RunSession | null>(null);
 
@@ -93,6 +107,7 @@ export function useTimerEngine(): UseTimerEngineReturn {
   // Refs to break circular dependency between advanceStep ↔ startTickStable
   const advanceStepRef = useRef<((sess: RunSession, stepStatus: StepStatus) => Promise<void>) | null>(null);
   const startTickRef = useRef<(() => void) | null>(null);
+  const presentNextDeferredOrCompleteRef = useRef<((sess: RunSession) => Promise<void>) | null>(null);
 
   const advanceStep = useCallback(async (sess: RunSession, stepStatus: StepStatus) => {
     clearTick();
@@ -106,10 +121,55 @@ export function useTimerEngine(): UseTimerEngineReturn {
     currentStep.completedAt = now;
     currentStep.elapsedTime = calcStepElapsed(currentStep);
 
+    // v2: If this was a deferred step being resolved, go back to deferred resolution
+    if (currentStep.wasDeferred) {
+      const updatedSession: RunSession = {
+        ...sess,
+        steps,
+        totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+      setSession(updatedSession);
+      setTotalElapsedTime(updatedSession.totalElapsedTime);
+      await presentNextDeferredOrCompleteRef.current?.(updatedSession);
+      return;
+    }
+
     const nextIdx = currentIdx + 1;
 
     if (nextIdx >= steps.length) {
-      // All steps done → session complete
+      // All main steps done — check for deferred steps before completing
+      const deferredQueue = sess.deferredSteps ?? [];
+      if (deferredQueue.length > 0) {
+        // Enter deferred resolution: present first deferred step
+        const firstDeferredId = deferredQueue[0];
+        const deferredStep = steps.find((s) => s.id === firstDeferredId) ?? null;
+        const remainingQueue = deferredQueue.slice(1);
+
+        if (deferredStep) {
+          // Reset deferred step to pending for resolution
+          deferredStep.status = 'pending';
+          const deferredIdx = steps.findIndex((s) => s.id === firstDeferredId);
+
+          const resolvingSession: RunSession = {
+            ...sess,
+            steps,
+            deferredSteps: remainingQueue,
+            currentStepIndex: deferredIdx >= 0 ? deferredIdx : currentIdx,
+            status: 'resolving-deferred' as RunSession['status'],
+            totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+          };
+
+          setSession(resolvingSession);
+          setElapsedTime(0);
+          setTotalElapsedTime(resolvingSession.totalElapsedTime);
+          setIsResolvingDeferred(true);
+          setCurrentDeferredStep(deferredStep);
+          await persistSession(resolvingSession);
+          return;
+        }
+      }
+
+      // No deferred steps (or deferred step not found) → session complete
       const completedSession: RunSession = {
         ...sess,
         steps,
@@ -121,6 +181,34 @@ export function useTimerEngine(): UseTimerEngineReturn {
       setElapsedTime(0);
       setTotalElapsedTime(completedSession.totalElapsedTime);
       await persistSession(completedSession);
+      return;
+    }
+
+    // v2: If pauseBetweenSteps is on and next step is a regular active step, enter waiting-for-advance
+    if (sess.pauseBetweenSteps && steps[nextIdx].type !== 'checkpoint' && steps[nextIdx].type !== 'wait') {
+      const waitingSession: RunSession = {
+        ...sess,
+        steps,
+        currentStepIndex: nextIdx,
+        status: 'waiting-for-advance',
+        totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+
+      setSession(waitingSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(waitingSession.totalElapsedTime);
+      setIsWaitingForAdvance(true);
+
+      // Fire transition for chime/TTS
+      setLastTransition({
+        stepName: steps[nextIdx].name,
+        stepNumber: nextIdx + 1,
+        totalSteps: steps.length,
+        timestamp: Date.now(),
+      });
+
+      await persistSession(waitingSession);
+      // Don't start tick — user will tap Start
       return;
     }
 
@@ -235,6 +323,7 @@ export function useTimerEngine(): UseTimerEngineReturn {
       ...newSession,
       steps,
       status: 'running',
+      pauseBetweenSteps: template.pauseBetweenSteps ?? false,
     };
 
     setSession(runningSession);
@@ -273,6 +362,26 @@ export function useTimerEngine(): UseTimerEngineReturn {
       setSession(existingSession);
       setElapsedTime(step?.elapsedTime ?? 0);
       setTotalElapsedTime(existingSession.totalElapsedTime);
+      return;
+    }
+
+    // v2: Waiting-for-advance session: hydrate and set waiting state
+    if (existingSession.status === 'waiting-for-advance') {
+      setSession(existingSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(existingSession.totalElapsedTime);
+      setIsWaitingForAdvance(true);
+      return;
+    }
+
+    // v2: Resolving-deferred session: hydrate and present the current deferred step
+    if ((existingSession.status as string) === 'resolving-deferred') {
+      const currentStep = existingSession.steps[existingSession.currentStepIndex];
+      setSession(existingSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(existingSession.totalElapsedTime);
+      setIsResolvingDeferred(true);
+      setCurrentDeferredStep(currentStep ?? null);
       return;
     }
 
@@ -435,6 +544,359 @@ export function useTimerEngine(): UseTimerEngineReturn {
     await advanceStepRef.current?.(sess, 'completed');
   }, [checkpointDisplayIndex]);
 
+  // v2: User taps Start during waiting-for-advance — begin the pending step
+  const advanceFromWaiting = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || !isWaitingForAdvance) return;
+
+    setIsWaitingForAdvance(false);
+
+    const now = Timestamp.fromDate(new Date());
+    const steps = [...sess.steps.map((s) => ({ ...s }))]; 
+    const idx = sess.currentStepIndex;
+
+    steps[idx] = {
+      ...steps[idx],
+      status: 'running' as StepStatus,
+      startedAt: now,
+    };
+
+    const runningSession: RunSession = {
+      ...sess,
+      steps,
+      status: 'running',
+    };
+
+    setSession(runningSession);
+    setElapsedTime(0);
+    await persistSession(runningSession);
+    startTickStable();
+  }, [isWaitingForAdvance, persistSession, startTickStable]);
+
+  // v2: User taps Skip during waiting-for-advance — skip the pending step
+  const skipFromWaiting = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || !isWaitingForAdvance) return;
+
+    setIsWaitingForAdvance(false);
+
+    // Mark the pending step as skipped and advance
+    const now = Timestamp.fromDate(new Date());
+    const steps = [...sess.steps.map((s) => ({ ...s }))];
+    const idx = sess.currentStepIndex;
+
+    steps[idx] = {
+      ...steps[idx],
+      status: 'skipped' as StepStatus,
+      completedAt: now,
+      elapsedTime: 0,
+    };
+
+    const nextIdx = idx + 1;
+    if (nextIdx >= steps.length) {
+      // All steps done
+      const completedSession: RunSession = {
+        ...sess,
+        steps,
+        status: 'completed',
+        completedAt: now,
+        totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+      setSession(completedSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(completedSession.totalElapsedTime);
+      await persistSession(completedSession);
+      return;
+    }
+
+    // Check if next step also needs waiting-for-advance
+    const updatedSession: RunSession = {
+      ...sess,
+      steps,
+      currentStepIndex: nextIdx,
+      totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+    };
+    setSession(updatedSession);
+    setTotalElapsedTime(updatedSession.totalElapsedTime);
+    await persistSession(updatedSession);
+
+    // Use advanceStep to handle the next step (checkpoint, wait, or another waiting-for-advance)
+    await advanceStepRef.current?.(updatedSession, 'skipped');
+  }, [isWaitingForAdvance, persistSession]);
+
+  // v2: Defer the current step — mark deferred, move to end, advance to next non-deferred
+  const defer = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || (sess.status !== 'running' && sess.status !== 'paused')) return;
+
+    clearTick();
+    const now = Timestamp.fromDate(new Date());
+    const steps = [...sess.steps.map((s) => ({ ...s }))];
+    const currentIdx = sess.currentStepIndex;
+    const currentStep = steps[currentIdx];
+
+    // Mark step as deferred
+    currentStep.status = 'deferred';
+    currentStep.elapsedTime = calcStepElapsed(currentStep);
+    currentStep.completedAt = now;
+    currentStep.wasDeferred = true;
+
+    // Track in deferredSteps array
+    const deferredSteps = [...(sess.deferredSteps ?? []), currentStep.id];
+
+    // Find the next non-deferred step
+    let nextIdx = currentIdx + 1;
+    while (nextIdx < steps.length && steps[nextIdx].status === 'deferred') {
+      nextIdx++;
+    }
+
+    if (nextIdx >= steps.length) {
+      // All remaining steps are deferred — enter deferred resolution
+      const firstDeferredId = deferredSteps[0];
+      const deferredStep = steps.find((s) => s.id === firstDeferredId) ?? null;
+      const remainingQueue = deferredSteps.slice(1);
+
+      if (deferredStep) {
+        deferredStep.status = 'pending';
+        const deferredResolveIdx = steps.findIndex((s) => s.id === firstDeferredId);
+
+        const resolvingSession: RunSession = {
+          ...sess,
+          steps,
+          deferredSteps: remainingQueue,
+          currentStepIndex: deferredResolveIdx >= 0 ? deferredResolveIdx : currentIdx,
+          status: 'resolving-deferred' as RunSession['status'],
+          totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+        };
+
+        setSession(resolvingSession);
+        setElapsedTime(0);
+        setTotalElapsedTime(resolvingSession.totalElapsedTime);
+        setIsResolvingDeferred(true);
+        setCurrentDeferredStep(deferredStep);
+        await persistSession(resolvingSession);
+      } else {
+        // Fallback: complete session
+        const completedSession: RunSession = {
+          ...sess,
+          steps,
+          deferredSteps,
+          status: 'completed',
+          completedAt: now,
+          totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+        };
+        setSession(completedSession);
+        setElapsedTime(0);
+        setTotalElapsedTime(completedSession.totalElapsedTime);
+        await persistSession(completedSession);
+      }
+      return;
+    }
+
+    // Check if we need waiting-for-advance for the next step
+    if (sess.pauseBetweenSteps && steps[nextIdx].type !== 'checkpoint' && steps[nextIdx].type !== 'wait') {
+      const waitingSession: RunSession = {
+        ...sess,
+        steps,
+        deferredSteps,
+        currentStepIndex: nextIdx,
+        status: 'waiting-for-advance',
+        totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+
+      setSession(waitingSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(waitingSession.totalElapsedTime);
+      setIsWaitingForAdvance(true);
+
+      setLastTransition({
+        stepName: steps[nextIdx].name,
+        stepNumber: nextIdx + 1,
+        totalSteps: steps.length,
+        timestamp: Date.now(),
+      });
+
+      await persistSession(waitingSession);
+      return;
+    }
+
+    // Auto-advance to next step
+    steps[nextIdx] = {
+      ...steps[nextIdx],
+      status: 'running',
+      startedAt: now,
+    };
+
+    const updatedSession: RunSession = {
+      ...sess,
+      steps,
+      deferredSteps,
+      currentStepIndex: nextIdx,
+      totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+    };
+
+    setSession(updatedSession);
+    setElapsedTime(0);
+    setTotalElapsedTime(updatedSession.totalElapsedTime);
+
+    setLastTransition({
+      stepName: steps[nextIdx].name,
+      stepNumber: nextIdx + 1,
+      totalSteps: steps.length,
+      timestamp: Date.now(),
+    });
+
+    await persistSession(updatedSession);
+    startTickRef.current?.();
+  }, [clearTick, calcStepElapsed, persistSession]);
+
+  // v2: Helper — present the next deferred step for resolution, or complete if none remain
+  const presentNextDeferredOrComplete = useCallback(async (sess: RunSession) => {
+    const deferredQueue = sess.deferredSteps ?? [];
+    const now = Timestamp.fromDate(new Date());
+
+    if (deferredQueue.length === 0) {
+      // All deferred steps resolved → session complete
+      const completedSession: RunSession = {
+        ...sess,
+        status: 'completed',
+        completedAt: now,
+        totalElapsedTime: sess.steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+      setSession(completedSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(completedSession.totalElapsedTime);
+      setIsResolvingDeferred(false);
+      setCurrentDeferredStep(null);
+      await persistSession(completedSession);
+      return;
+    }
+
+    // Present next deferred step
+    const nextDeferredId = deferredQueue[0];
+    const steps = [...sess.steps.map((s) => ({ ...s }))];
+    const deferredStep = steps.find((s) => s.id === nextDeferredId) ?? null;
+    const remainingQueue = deferredQueue.slice(1);
+
+    if (deferredStep) {
+      deferredStep.status = 'pending';
+      const deferredIdx = steps.findIndex((s) => s.id === nextDeferredId);
+
+      const resolvingSession: RunSession = {
+        ...sess,
+        steps,
+        deferredSteps: remainingQueue,
+        currentStepIndex: deferredIdx >= 0 ? deferredIdx : sess.currentStepIndex,
+        status: 'resolving-deferred' as RunSession['status'],
+        totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+      };
+
+      setSession(resolvingSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(resolvingSession.totalElapsedTime);
+      setIsResolvingDeferred(true);
+      setCurrentDeferredStep(deferredStep);
+      await persistSession(resolvingSession);
+    } else {
+      // Step not found — try next or complete
+      const fallbackSession: RunSession = { ...sess, deferredSteps: remainingQueue };
+      await presentNextDeferredOrComplete(fallbackSession);
+    }
+  }, [persistSession]);
+
+  // Keep ref in sync for deferred resolution
+  useEffect(() => {
+    presentNextDeferredOrCompleteRef.current = presentNextDeferredOrComplete;
+  }, [presentNextDeferredOrComplete]);
+
+  // v2: Start the presented deferred step (user taps Start during resolution)
+  const startDeferredStep = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || !currentDeferredStep) return;
+
+    const now = Timestamp.fromDate(new Date());
+    const steps = [...sess.steps.map((s) => ({ ...s }))];
+    const deferredIdx = steps.findIndex((s) => s.id === currentDeferredStep.id);
+    if (deferredIdx < 0) return;
+
+    steps[deferredIdx] = {
+      ...steps[deferredIdx],
+      status: 'running' as StepStatus,
+      startedAt: now,
+    };
+
+    const runningSession: RunSession = {
+      ...sess,
+      steps,
+      currentStepIndex: deferredIdx,
+      status: 'running',
+    };
+
+    setSession(runningSession);
+    setElapsedTime(0);
+    setIsResolvingDeferred(false);
+    setCurrentDeferredStep(null);
+    await persistSession(runningSession);
+    startTickRef.current?.();
+  }, [currentDeferredStep, persistSession]);
+
+  // v2: Skip the presented deferred step
+  const skipDeferredStep = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || !currentDeferredStep) return;
+
+    const now = Timestamp.fromDate(new Date());
+    const steps = [...sess.steps.map((s) => ({ ...s }))];
+    const deferredIdx = steps.findIndex((s) => s.id === currentDeferredStep.id);
+    if (deferredIdx >= 0) {
+      steps[deferredIdx] = {
+        ...steps[deferredIdx],
+        status: 'skipped' as StepStatus,
+        completedAt: now,
+        elapsedTime: 0,
+      };
+    }
+
+    const updatedSession: RunSession = {
+      ...sess,
+      steps,
+      totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+    };
+
+    setSession(updatedSession);
+    setCurrentDeferredStep(null);
+    await presentNextDeferredOrComplete(updatedSession);
+  }, [currentDeferredStep, presentNextDeferredOrComplete, persistSession]);
+
+  // v2: Defer the step again — re-append to end of queue
+  const deferAgain = useCallback(async () => {
+    const sess = sessionRef.current;
+    if (!sess || !currentDeferredStep) return;
+
+    const steps = [...sess.steps.map((s) => ({ ...s }))];
+    const deferredIdx = steps.findIndex((s) => s.id === currentDeferredStep.id);
+    if (deferredIdx >= 0) {
+      steps[deferredIdx] = {
+        ...steps[deferredIdx],
+        status: 'deferred' as StepStatus,
+      };
+    }
+
+    // Re-append to deferredSteps queue
+    const deferredQueue = [...(sess.deferredSteps ?? []), currentDeferredStep.id];
+
+    const updatedSession: RunSession = {
+      ...sess,
+      steps,
+      deferredSteps: deferredQueue,
+      totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+    };
+
+    setSession(updatedSession);
+    setCurrentDeferredStep(null);
+    await presentNextDeferredOrComplete(updatedSession);
+  }, [currentDeferredStep, presentNextDeferredOrComplete]);
+
   const extend = useCallback(async (seconds: number) => {
     const sess = sessionRef.current;
     if (!sess) return;
@@ -531,6 +993,25 @@ export function useTimerEngine(): UseTimerEngineReturn {
     if (snapshot.status === 'running') {
       startTickStable();
     }
+
+    // v2: Sync waiting-for-advance state
+    if (snapshot.status === 'waiting-for-advance') {
+      setIsWaitingForAdvance(true);
+      setElapsedTime(0);
+    } else {
+      setIsWaitingForAdvance(false);
+    }
+
+    // v2: Sync resolving-deferred state
+    if ((snapshot.status as string) === 'resolving-deferred') {
+      const deferredStep = snapshot.steps[snapshot.currentStepIndex] ?? null;
+      setIsResolvingDeferred(true);
+      setCurrentDeferredStep(deferredStep);
+      setElapsedTime(0);
+    } else {
+      setIsResolvingDeferred(false);
+      setCurrentDeferredStep(null);
+    }
   }, [clearTick, calcStepElapsed, calcTotalElapsed, startTickStable]);
 
   return {
@@ -545,6 +1026,19 @@ export function useTimerEngine(): UseTimerEngineReturn {
     lastTransition,
     clearTransition,
     checkpointDisplayIndex,
+    isWaitingForAdvance,
+    nextStepName: isWaitingForAdvance && session
+      ? session.steps[session.currentStepIndex]?.name ?? null
+      : null,
+    advanceFromWaiting,
+    skipFromWaiting,
+    defer,
+    deferredCount: session?.deferredSteps?.length ?? 0,
+    isResolvingDeferred,
+    currentDeferredStep,
+    startDeferredStep,
+    skipDeferredStep,
+    deferAgain,
     start,
     startFromSession,
     pause,

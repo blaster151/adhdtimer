@@ -399,4 +399,41 @@ describe('TimerForm', () => {
       }),
     );
   });
+
+  // ---- Pause between steps tests ----
+
+  it('renders pause between steps toggle', () => {
+    render(<TimerForm />);
+    expect(screen.getByLabelText('Pause between steps')).toBeInTheDocument();
+    expect(screen.getByText('Timer pauses at each step transition. Tap to start the next step.')).toBeInTheDocument();
+  });
+
+  it('pause between steps toggle defaults to off', () => {
+    render(<TimerForm />);
+    const toggle = screen.getByLabelText('Pause between steps');
+    expect(toggle).toHaveAttribute('data-state', 'unchecked');
+  });
+
+  it('pre-populates pause toggle from initialTimer', () => {
+    const timerWithPause = { ...mockTimer, pauseBetweenSteps: true };
+    render(<TimerForm initialTimer={timerWithPause} />);
+    const toggle = screen.getByLabelText('Pause between steps');
+    expect(toggle).toHaveAttribute('data-state', 'checked');
+  });
+
+  it('saves pauseBetweenSteps when creating timer', async () => {
+    render(<TimerForm />);
+    fireEvent.change(screen.getByLabelText('Timer Name'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByLabelText('Step 1 name'), { target: { value: 'Work' } });
+    fireEvent.click(screen.getByLabelText('Pause between steps'));
+    fireEvent.click(screen.getByText('Save Timer'));
+
+    await vi.waitFor(() => {
+      expect(mockCreateTimer).toHaveBeenCalledOnce();
+    });
+    expect(mockCreateTimer).toHaveBeenCalledWith(
+      'test-uid',
+      expect.objectContaining({ pauseBetweenSteps: true }),
+    );
+  });
 });

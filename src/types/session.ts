@@ -6,7 +6,7 @@ import type { StepType } from './timer';
 // ========================================
 
 /** Union type per ADR-5 — no enums */
-export type SessionStatus = 'idle' | 'running' | 'paused' | 'completed' | 'waiting-for-advance';
+export type SessionStatus = 'idle' | 'running' | 'paused' | 'completed' | 'waiting-for-advance' | 'resolving-deferred';
 
 /** Union type per ADR-5 — no enums */
 export type StepStatus = 'pending' | 'running' | 'paused' | 'completed' | 'skipped' | 'deferred';
@@ -22,6 +22,7 @@ export interface SessionStep {
   completedAt?: Timestamp;
   type?: StepType;          // v2 — mirrors Step.type from template
   targetTime?: string;      // v2 — HH:MM for checkpoint steps
+  wasDeferred?: boolean;    // v2 — true if step was ever deferred in this session
 }
 
 export interface RunSession {

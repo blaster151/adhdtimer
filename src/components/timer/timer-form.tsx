@@ -31,6 +31,9 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
   const [countdownMode, setCountdownMode] = useState(
     initialTimer?.countdownMode ?? false,
   );
+  const [pauseBetweenSteps, setPauseBetweenSteps] = useState(
+    initialTimer?.pauseBetweenSteps ?? false,
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isNameFromAI, setIsNameFromAI] = useState(false);
   const router = useRouter();
@@ -74,6 +77,7 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
       description: description.trim() || undefined,
       totalPlannedDuration: totalDuration,
       countdownMode,
+      pauseBetweenSteps,
       steps: steps.map((s) => ({
         ...s,
         name: s.name.trim(),
@@ -160,6 +164,21 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
           onCheckedChange={setCountdownMode}
           disabled={isSaving}
           aria-label="Countdown mode"
+        />
+      </div>
+
+      {/* Pause between steps toggle */}
+      <div className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="pause-between-steps">Pause between steps</Label>
+          <p className="text-xs text-muted-foreground">Timer pauses at each step transition. Tap to start the next step.</p>
+        </div>
+        <Switch
+          id="pause-between-steps"
+          checked={pauseBetweenSteps}
+          onCheckedChange={setPauseBetweenSteps}
+          disabled={isSaving}
+          aria-label="Pause between steps"
         />
       </div>
 

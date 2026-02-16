@@ -25,6 +25,9 @@ export function StepDots({ steps, currentIndex }: StepDotsProps) {
           const colorClass = isCheckpoint ? 'bg-[var(--checkpoint)]' : isWaitStep ? 'bg-[var(--wait)]' : 'bg-primary';
           dotClass = `h-2.5 w-2.5 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} ${colorClass}`;
           label = `Step ${i + 1}: ${step.name} (completed)`;
+        } else if (step.status === 'deferred') {
+          dotClass = `h-2.5 w-2.5 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} bg-[var(--deferred)] opacity-40`;
+          label = `Step ${i + 1}: ${step.name} (deferred)`;
         } else if (step.status === 'skipped') {
           dotClass = `h-2.5 w-2.5 ${isCheckpoint ? 'rotate-45 rounded-[1px]' : 'rounded-full'} bg-muted-foreground opacity-50`;
           label = `Step ${i + 1}: ${step.name} (skipped)`;

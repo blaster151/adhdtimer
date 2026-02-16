@@ -1,6 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { DeferButton } from '@/components/session/defer-button';
+import type { StepType } from '@/types/timer';
 
 interface PlaybackControlsProps {
   isRunning: boolean;
@@ -13,6 +15,8 @@ interface PlaybackControlsProps {
   onSkip: () => void;
   onStop: () => void;
   onExtend?: (seconds: number) => void;
+  onDefer?: () => void;
+  currentStepType?: StepType;
 }
 
 export function PlaybackControls({
@@ -26,6 +30,8 @@ export function PlaybackControls({
   onSkip,
   onStop,
   onExtend,
+  onDefer,
+  currentStepType,
 }: PlaybackControlsProps) {
   if (isCompleted) return null;
 
@@ -101,6 +107,12 @@ export function PlaybackControls({
           >
             +5 min
           </Button>
+          {onDefer && (
+            <DeferButton
+              onDefer={onDefer}
+              disabled={disabled || currentStepType === 'checkpoint'}
+            />
+          )}
         </div>
       )}
     </div>

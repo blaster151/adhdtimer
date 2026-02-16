@@ -11,9 +11,12 @@ import { useWakeLock } from '@/hooks/use-wake-lock';
 import { useCheckpoint } from '@/hooks/use-checkpoint';
 
 import { PlaybackControls } from '@/components/session/playback-controls';
+import { ManualAdvanceButton } from '@/components/session/manual-advance-button';
 import { TransitionOverlay } from '@/components/session/transition-overlay';
 import { ProgressRing } from '@/components/session/progress-ring';
 import { StepDots } from '@/components/session/step-dots';
+import { DeferredBadge } from '@/components/session/deferred-badge';
+import { DeferredResolution } from '@/components/session/deferred-resolution';
 import { CompletionView } from '@/components/session/completion-view';
 import { calculatePace } from '@/lib/utils/pace';
 import { formatDuration, formatDurationSpeech, formatCountdown } from '@/lib/utils/time';
@@ -148,8 +151,13 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       const step = engine.session?.steps[engine.session.currentStepIndex];
       if (step) {
         const ttsTimer = setTimeout(() => {
-          const waitSuffix = step.type === 'wait' ? ' Waiting.' : '';
-          tts.speak(`${step.name}. ${formatDurationSpeech(step.plannedDuration)}.${waitSuffix}`);
+          // v2: Different TTS for waiting-for-advance
+          if (engine.isWaitingForAdvance) {
+            tts.speak(`Done. Next up: ${step.name}. Tap when ready.`);
+          } else {
+            const waitSuffix = step.type === 'wait' ? ' Waiting.' : '';
+            tts.speak(`${step.name}. ${formatDurationSpeech(step.plannedDuration)}.${waitSuffix}`);
+          }
         }, 50);
         // Clean up TTS timer on unmount
         const overlayTimer = setTimeout(() => {
@@ -225,6 +233,14 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     engine.updateFromSnapshot(data);
   }, [firestoreSession.session, firestoreSession.error, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // TTS announcement for deferred step resolution
+  useEffect(() => {
+    if (engine.isResolvingDeferred && engine.currentDeferredStep) {
+      const stepName = engine.currentDeferredStep.name;
+      tts.speak(`All main steps done. You deferred ${stepName} earlier. Ready to do it now?`);
+    }
+  }, [engine.isResolvingDeferred, engine.currentDeferredStep, tts]);
+
   // Cancel TTS on completion
   useEffect(() => {
     if (engine.isCompleted) {
@@ -232,21 +248,21 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     }
   }, [engine.isCompleted, tts]);
 
-  // Wake lock lifecycle: acquire when running, release when paused/completed
+  // Wake lock lifecycle: acquire when running or waiting, release when paused/completed
   useEffect(() => {
-    if (engine.isRunning && !engine.isPaused && !engine.isCompleted) {
+    if ((engine.isRunning || engine.isWaitingForAdvance || engine.isResolvingDeferred) && !engine.isPaused && !engine.isCompleted) {
       wakeLock.request();
     } else {
       wakeLock.release();
     }
-  }, [engine.isRunning, engine.isPaused, engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engine.isRunning, engine.isPaused, engine.isCompleted, engine.isWaitingForAdvance, engine.isResolvingDeferred]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-acquire wake lock on visibility change (tab returns to foreground)
   useEffect(() => {
     function handleVisibilityChange() {
       if (
         document.visibilityState === 'visible' &&
-        engine.isRunning &&
+        (engine.isRunning || engine.isWaitingForAdvance || engine.isResolvingDeferred) &&
         !engine.isPaused &&
         !engine.isCompleted
       ) {
@@ -257,7 +273,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [engine.isRunning, engine.isPaused, engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engine.isRunning, engine.isPaused, engine.isCompleted, engine.isWaitingForAdvance, engine.isResolvingDeferred]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!engine.session) {
     return (
@@ -381,6 +397,21 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
             stepType="checkpoint"
           />
         </div>
+      ) : engine.isWaitingForAdvance && engine.nextStepName ? (
+        <ProgressRing
+          stepProgress={0}
+          totalProgress={totalProgress}
+          stepName={`Next: ${engine.nextStepName}`}
+          elapsedDisplay=""
+          paceMessage="Tap Start when ready"
+          paceStatus="on-track"
+          isOverrun={false}
+          isPaused={true}
+          stepNumber={session.currentStepIndex + 1}
+          totalSteps={session.steps.length}
+          timerName={session.timerName}
+          ariaElapsedLabel={`Waiting for advance. Next step: ${engine.nextStepName}`}
+        />
       ) : currentStep ? (
         <ProgressRing
           stepProgress={stepProgress}
@@ -400,7 +431,8 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         />
       ) : null}
 
-      {/* Step dots */}
+      {/* Deferred badge + Step dots */}
+      {engine.deferredCount > 0 && <DeferredBadge count={engine.deferredCount} />}
       <StepDots steps={session.steps} currentIndex={session.currentStepIndex} />
 
       {/* Transition overlay */}
@@ -426,18 +458,37 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         );
       })()}
 
-      {/* Playback controls */}
-      <PlaybackControls
-        isRunning={isRunning}
-        isPaused={isPaused}
-        isCompleted={false}
-        isLastStep={isLastStep}
-        onPause={engine.pause}
-        onResume={engine.resume}
-        onSkip={engine.skip}
-        onStop={engine.stop}
-        onExtend={engine.extend}
-      />
+      {/* Playback controls — swap for resolution/advance/normal modes */}
+      {engine.isResolvingDeferred && engine.currentDeferredStep ? (
+        <DeferredResolution
+          stepName={engine.currentDeferredStep.name}
+          plannedDuration={engine.currentDeferredStep.plannedDuration}
+          onStart={engine.startDeferredStep}
+          onSkip={engine.skipDeferredStep}
+          onDeferAgain={engine.deferAgain}
+        />
+      ) : engine.isWaitingForAdvance && engine.nextStepName ? (
+        <ManualAdvanceButton
+          nextStepName={engine.nextStepName}
+          onStart={engine.advanceFromWaiting}
+          onSkip={engine.skipFromWaiting}
+          onStop={engine.stop}
+        />
+      ) : (
+        <PlaybackControls
+          isRunning={isRunning}
+          isPaused={isPaused}
+          isCompleted={false}
+          isLastStep={isLastStep}
+          onPause={engine.pause}
+          onResume={engine.resume}
+          onSkip={engine.skip}
+          onStop={engine.stop}
+          onExtend={engine.extend}
+          onDefer={engine.defer}
+          currentStepType={currentStep?.type}
+        />
+      )}
 
       {/* Step list — only show when there are multiple steps */}
       {session.steps.length > 1 && (
