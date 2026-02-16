@@ -21,7 +21,10 @@ selected_track: "method"
 field_type: "greenfield"
 workflow_path: "method-greenfield.yaml"
 
-workflow_status:
+# =============================================
+# v1 (MVP) — COMPLETED 2026-02-16
+# =============================================
+v1_workflow_status:
   # Phase 0: Discovery (Optional)
   brainstorm-project: docs/brainstorming-session-results-2026-02-14.md
   research: optional
@@ -36,6 +39,37 @@ workflow_status:
   create-architecture: docs/architecture.md
   validate-architecture: optional
   solutioning-gate-check: docs/implementation-readiness-report-2026-02-14.md
+
+  # Phase 3: Implementation
+  sprint-planning: docs/sprint-status.yaml
+
+# =============================================
+# v2 — IN PROGRESS
+# =============================================
+# field_type for v2: brownfield (existing codebase)
+# Minimum scope (floor):
+#   - Post-completion review / timer adjustment suggestions
+#   - Step types (Active / Wait / Checkpoint)
+#   - Pause-between-steps toggle (manual advance mode)
+#   - Gentle step reminder during long steps
+#   - Repeatable routines with scheduling and reminders
+#   - Low-key streak/habit tracker (opt-in, non-shaming)
+
+workflow_status:
+  # Phase 0: Discovery
+  brainstorm-project: skipped
+  research: optional
+  product-brief: docs/product-brief-adhdtimer-v2-2026-02-16.md
+
+  # Phase 1: Planning
+  prd: docs/PRD-v2.md
+  validate-prd: optional
+  create-design: docs/ux-design-specification-v2.md
+
+  # Phase 2: Solutioning
+  create-architecture: docs/architecture-v2.md
+  validate-architecture: optional
+  solutioning-gate-check: docs/implementation-readiness-report-v2-2026-02-16.md
 
   # Phase 3: Implementation
   sprint-planning: docs/sprint-status.yaml

@@ -36,45 +36,93 @@ tracking_system: file-system
 story_location: "{project-root}/docs/stories"
 
 development_status:
+  # =============================================
+  # v1 (MVP) — COMPLETED 2026-02-16
+  # =============================================
+
   # Epic 1: Foundation & Core Timer Engine (7 stories)
-  epic-1: contexted
-  1-1-project-setup-and-deployment-pipeline: in-progress
-  1-2-firebase-authentication: ready-for-dev
-  1-3-timer-data-model-and-firestore-schema: ready-for-dev
-  1-4-timer-crud-create-and-list: ready-for-dev
-  1-5-timer-crud-edit-and-delete: ready-for-dev
-  1-6-core-playback-play-pause-skip: ready-for-dev
-  1-7-time-extension: ready-for-dev
+  epic-1: done
+  1-1-project-setup-and-deployment-pipeline: done
+  1-2-firebase-authentication: done
+  1-3-timer-data-model-and-firestore-schema: done
+  1-4-timer-crud-create-and-list: done
+  1-5-timer-crud-edit-and-delete: done
+  1-6-core-playback-play-pause-skip: done
+  1-7-time-extension: done
   epic-1-retrospective: optional
 
   # Epic 2: Guided Execution Experience (5 stories)
-  epic-2: contexted
-  2-1-contextual-transition-messages: ready-for-dev
-  2-2-text-to-speech-step-announcements: ready-for-dev
-  2-3-visual-progress-indicator: ready-for-dev
-  2-4-timer-completion-view: ready-for-dev
-  2-5-screen-wake-lock: ready-for-dev
+  epic-2: done
+  2-1-contextual-transition-messages: done
+  2-2-text-to-speech-step-announcements: done
+  2-3-visual-progress-indicator: done
+  2-4-timer-completion-view: done
+  2-5-screen-wake-lock: done
   epic-2-retrospective: optional
 
   # Epic 3: Real-Time Sync (4 stories)
-  epic-3: contexted
-  3-1-real-time-session-listener: ready-for-dev
-  3-2-device-control-handoff: ready-for-dev
-  3-3-sync-conflict-handling: ready-for-dev
-  3-4-active-session-detection-and-routing: ready-for-dev
+  epic-3: done
+  3-1-real-time-session-listener: done
+  3-2-device-control-handoff: done
+  3-3-sync-conflict-handling: done
+  3-4-active-session-detection-and-routing: done
   epic-3-retrospective: optional
 
   # Epic 4: Timer Editing & Polish (4 stories)
-  epic-4: contexted
-  4-1-swipe-to-adjust-durations: ready-for-dev
-  4-2-drag-to-reorder-steps: ready-for-dev
-  4-3-count-up-countdown-toggle: ready-for-dev
-  4-4-timer-library-polish: ready-for-dev
+  epic-4: done
+  4-1-swipe-to-adjust-durations: done
+  4-2-drag-to-reorder-steps: done
+  4-3-count-up-countdown-toggle: done
+  4-4-timer-library-polish: done
   epic-4-retrospective: optional
 
   # Epic 5: AI-Powered Task Breakdown (3 stories)
-  epic-5: contexted
-  5-1-ai-breakdown-api-route: ready-for-dev
-  5-2-ai-breakdown-ui-input-and-loading: ready-for-dev
-  5-3-ai-breakdown-edit-regenerate-and-save: ready-for-dev
+  epic-5: done
+  5-1-ai-breakdown-api-route: done
+  5-2-ai-breakdown-ui-input-and-loading: done
+  5-3-ai-breakdown-edit-regenerate-and-save: done
   epic-5-retrospective: optional
+
+  # =============================================
+  # v2 — EPIC BREAKDOWN COMPLETE (19 stories)
+  # Epic doc: docs/epics-v2.md
+  # =============================================
+
+  # Epic 6: Step Types & Schema Evolution (5 stories)
+  epic-6: contexted
+  6-1-schema-evolution-step-types-and-timer-settings: drafted
+  6-2-checkpoint-utility-functions: drafted
+  6-3-step-type-selector-in-timer-editor: drafted
+  6-4-wait-step-playback: drafted
+  6-5-checkpoint-playback: drafted
+  epic-6-retrospective: optional
+
+  # Epic 7: Playback Evolution (4 stories)
+  epic-7: backlog
+  7-1-pause-between-steps-toggle-and-ui: backlog
+  7-2-manual-advance-playback: backlog
+  7-3-defer-step-action-and-tracking: backlog
+  7-4-deferred-step-resolution: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Routines & Habits (4 stories)
+  epic-8: backlog
+  8-1-schedule-configuration-ui: backlog
+  8-2-schedule-utility-functions-and-due-today-logic: backlog
+  8-3-due-today-section-and-streak-badges-in-timer-library: backlog
+  8-4-streak-settings-and-streak-update-on-completion: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: Learning Companion (4 stories)
+  epic-9: backlog
+  9-1-suggestion-algorithm-and-firestore-query: backlog
+  9-2-suggestion-ui-in-completion-view: backlog
+  9-3-gentle-step-reminder: backlog
+  9-4-reminder-settings-integration-and-polish: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Smarter AI (2 stories)
+  epic-10: backlog
+  10-1-vague-task-detection-utilities: backlog
+  10-2-vague-task-suggestion-ui-in-timer-editor: backlog
+  epic-10-retrospective: optional
