@@ -98,11 +98,11 @@ development_status:
   epic-6-retrospective: optional
 
   # Epic 7: Playback Evolution (4 stories)
-  epic-7: backlog
-  7-1-pause-between-steps-toggle-and-ui: backlog
-  7-2-manual-advance-playback: backlog
-  7-3-defer-step-action-and-tracking: backlog
-  7-4-deferred-step-resolution: backlog
+  epic-7: contexted
+  7-1-pause-between-steps-toggle-and-ui: drafted
+  7-2-manual-advance-playback: drafted
+  7-3-defer-step-action-and-tracking: drafted
+  7-4-deferred-step-resolution: drafted
   epic-7-retrospective: optional
 
   # Epic 8: Routines & Habits (4 stories)
