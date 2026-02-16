@@ -1,11 +1,11 @@
 'use client';
 
 import { TimerLibrary } from '@/components/timer/timer-library';
-import { useActiveSessionRedirect } from '@/hooks/use-active-session-redirect';
+import { useActiveSessions } from '@/hooks/use-active-session-redirect';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TimerLibraryPage() {
-  const { checking } = useActiveSessionRedirect();
+  const { checking, activeSessions } = useActiveSessions();
 
   if (checking) {
     return (
@@ -17,7 +17,7 @@ export default function TimerLibraryPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <TimerLibrary />
+      <TimerLibrary activeSessions={activeSessions} />
     </div>
   );
 }

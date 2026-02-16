@@ -8,6 +8,8 @@ import { createTimer, updateTimer } from '@/lib/firebase/timers';
 import { formatDuration } from '@/lib/utils/time';
 import type { Step, TimerTemplate } from '@/types/timer';
 import { StepListEditor } from '@/components/timer/step-list-editor';
+import { AIBreakdownPanel } from '@/components/timer/ai-breakdown-panel';
+import type { AIBreakdownStep } from '@/components/timer/ai-breakdown-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +32,7 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
     initialTimer?.countdownMode ?? false,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isNameFromAI, setIsNameFromAI] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -87,8 +90,26 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
     router.push('/app');
   }
 
+  function handleAISteps(timerName: string, aiSteps: AIBreakdownStep[]) {
+    // Only auto-fill name if empty or previously set by AI
+    if (name.trim() === '' || isNameFromAI) {
+      setName(timerName);
+      setIsNameFromAI(true);
+    }
+    setSteps(
+      aiSteps.map((s) => ({
+        id: crypto.randomUUID(),
+        name: s.name,
+        plannedDuration: s.durationMinutes * 60,
+      })),
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-6">
+      {/* AI Breakdown — create mode only */}
+      {!isEditMode && <AIBreakdownPanel onStepsGenerated={handleAISteps} />}
+
       {/* Timer Name */}
       <div className="space-y-2">
         <Label htmlFor="timer-name">Timer Name</Label>
@@ -96,7 +117,10 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
           id="timer-name"
           placeholder="e.g., Morning Routine"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            setIsNameFromAI(false);
+          }}
           required
           disabled={isSaving}
         />

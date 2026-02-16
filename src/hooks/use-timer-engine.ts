@@ -209,22 +209,108 @@ export function useTimerEngine(): UseTimerEngineReturn {
 
   const startFromSession = useCallback(async (existingSession: RunSession) => {
     const now = Timestamp.fromDate(new Date());
-    // Set first step to running and session status to running
-    const steps = existingSession.steps.map((s, i) =>
-      i === 0 && s.status === 'pending'
-        ? { ...s, status: 'running' as StepStatus, startedAt: now }
-        : s,
-    );
+
+    // Fresh/idle session: just start normally
+    if (existingSession.status === 'idle') {
+      const steps = existingSession.steps.map((s, i) =>
+        i === 0 && s.status === 'pending'
+          ? { ...s, status: 'running' as StepStatus, startedAt: now }
+          : s,
+      );
+      const runningSession: RunSession = {
+        ...existingSession,
+        steps,
+        status: 'running',
+      };
+      setSession(runningSession);
+      setElapsedTime(0);
+      setTotalElapsedTime(0);
+      await persistSession(runningSession);
+      startTickStable();
+      return;
+    }
+
+    // Paused session: hydrate as-is
+    if (existingSession.status === 'paused') {
+      const step = existingSession.steps[existingSession.currentStepIndex];
+      setSession(existingSession);
+      setElapsedTime(step?.elapsedTime ?? 0);
+      setTotalElapsedTime(existingSession.totalElapsedTime);
+      return;
+    }
+
+    // Running session: catch up through any overdue steps
+    const steps = existingSession.steps.map((s) => ({ ...s }));
+    let currentIdx = existingSession.currentStepIndex;
+
+    // Fast-forward through steps whose planned duration has been exceeded
+    while (currentIdx < steps.length) {
+      const step = steps[currentIdx];
+      if (step.status !== 'running') break;
+
+      const elapsed = step.startedAt
+        ? Math.floor((now.toMillis() - step.startedAt.toMillis()) / 1000)
+        : step.elapsedTime;
+
+      if (elapsed < step.plannedDuration) {
+        // This step is still in progress — stop catching up
+        break;
+      }
+
+      // Step overdue → mark completed
+      step.status = 'completed';
+      step.elapsedTime = elapsed;
+      step.completedAt = now;
+
+      const nextIdx = currentIdx + 1;
+      if (nextIdx >= steps.length) {
+        // All steps done → complete the session
+        const completedSession: RunSession = {
+          ...existingSession,
+          steps,
+          currentStepIndex: currentIdx,
+          status: 'completed',
+          completedAt: now,
+          totalElapsedTime: steps.reduce((sum, s) => sum + s.elapsedTime, 0),
+        };
+        setSession(completedSession);
+        setElapsedTime(0);
+        setTotalElapsedTime(completedSession.totalElapsedTime);
+        await persistSession(completedSession);
+        return;
+      }
+
+      // Start the next step — its startedAt is set to the moment the
+      // previous step *should* have ended, so elapsed calculation stays accurate
+      const prevStepEnd = step.startedAt
+        ? Timestamp.fromMillis(step.startedAt.toMillis() + step.plannedDuration * 1000)
+        : now;
+      steps[nextIdx] = {
+        ...steps[nextIdx],
+        status: 'running',
+        startedAt: prevStepEnd,
+      };
+      currentIdx = nextIdx;
+    }
+
+    const currentStep = steps[currentIdx];
+    const stepElapsed = currentStep?.startedAt && currentStep.status === 'running'
+      ? Math.floor((now.toMillis() - currentStep.startedAt.toMillis()) / 1000)
+      : currentStep?.elapsedTime ?? 0;
 
     const runningSession: RunSession = {
       ...existingSession,
       steps,
-      status: existingSession.status === 'idle' ? 'running' : existingSession.status,
+      currentStepIndex: currentIdx,
+      totalElapsedTime: steps.reduce((sum, s, i) => {
+        if (i === currentIdx && s.status === 'running') return sum + stepElapsed;
+        return sum + s.elapsedTime;
+      }, 0),
     };
 
     setSession(runningSession);
-    setElapsedTime(0);
-    setTotalElapsedTime(0);
+    setElapsedTime(stepElapsed);
+    setTotalElapsedTime(runningSession.totalElapsedTime);
     await persistSession(runningSession);
     if (runningSession.status === 'running') {
       startTickStable();
@@ -355,17 +441,28 @@ export function useTimerEngine(): UseTimerEngineReturn {
   }, []);
 
   /**
-   * Update engine state from a Firestore snapshot (observer mode).
-   * Recalculates elapsed times from timestamps without starting a local tick.
+   * Update engine state from a Firestore snapshot.
+   * When another device changes the session (pause, skip, stop, etc.),
+   * this adopts the new state so all devices stay in sync.
+   *
+   * We compare key fields to avoid re-processing our own echoed writes.
    */
   const updateFromSnapshot = useCallback((snapshot: RunSession) => {
-    const deviceId = getDeviceId();
-    const isController = snapshot.activeDeviceId === deviceId;
+    const local = sessionRef.current;
 
-    // Controller device ignores snapshots — it drives local state
-    if (isController) return;
+    // If no local session yet, skip (startFromSession handles initial load)
+    if (!local) return;
 
-    // Observer mode: replace session state from Firestore data
+    // Detect whether this snapshot differs from our local state.
+    // If it matches, it's likely our own write echoing back — skip it.
+    const sameStatus = local.status === snapshot.status;
+    const sameStep = local.currentStepIndex === snapshot.currentStepIndex;
+    const sameStepStatuses = local.steps.every(
+      (s, i) => snapshot.steps[i] && s.status === snapshot.steps[i].status,
+    );
+    if (sameStatus && sameStep && sameStepStatuses) return;
+
+    // Snapshot has meaningful changes from another device — adopt it
     clearTick();
     setSession(snapshot);
 
@@ -381,7 +478,12 @@ export function useTimerEngine(): UseTimerEngineReturn {
       setElapsedTime(stepElapsed);
     }
     setTotalElapsedTime(calcTotalElapsed(snapshot));
-  }, [clearTick, calcStepElapsed, calcTotalElapsed]);
+
+    // Restart local tick if the session is still running
+    if (snapshot.status === 'running') {
+      startTickStable();
+    }
+  }, [clearTick, calcStepElapsed, calcTotalElapsed, startTickStable]);
 
   return {
     session,

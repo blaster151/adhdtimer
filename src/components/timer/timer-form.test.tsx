@@ -41,7 +41,7 @@ vi.mock('sonner', () => ({
 // Mock useAuth
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({
-    user: { uid: 'test-uid', email: 'test@example.com' },
+    user: { uid: 'test-uid', email: 'test@example.com', getIdToken: () => Promise.resolve('mock-token') },
     loading: false,
     signInWithGoogle: vi.fn(),
     signInWithEmail: vi.fn(),
@@ -293,6 +293,110 @@ describe('TimerForm', () => {
     expect(mockCreateTimer).toHaveBeenCalledWith(
       'test-uid',
       expect.objectContaining({ countdownMode: true }),
+    );
+  });
+
+  // ---- AI integration tests ----
+
+  it('shows AI breakdown panel in create mode', () => {
+    render(<TimerForm />);
+    expect(screen.getByText('AI Task Breakdown')).toBeInTheDocument();
+  });
+
+  it('does not show AI breakdown panel in edit mode', () => {
+    render(<TimerForm initialTimer={mockTimer} />);
+    expect(screen.queryByText('AI Task Breakdown')).not.toBeInTheDocument();
+  });
+
+  it('populates form with AI-generated steps', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        timerName: 'Do Laundry',
+        steps: [
+          { name: 'Sort clothes', durationMinutes: 5 },
+          { name: 'Load washer', durationMinutes: 3 },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<TimerForm />);
+    fireEvent.change(screen.getByLabelText('Task description'), {
+      target: { value: 'do laundry' },
+    });
+    fireEvent.click(screen.getByText('Break it down ✨'));
+
+    await vi.waitFor(() => {
+      expect(screen.getByLabelText('Timer Name')).toHaveValue('Do Laundry');
+    });
+
+    // Steps populated
+    expect(screen.getByLabelText('Step 1 name')).toHaveValue('Sort clothes');
+    expect(screen.getByLabelText('Step 2 name')).toHaveValue('Load washer');
+  });
+
+  it('does not overwrite manually typed name on AI generation', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        timerName: 'Do Laundry',
+        steps: [{ name: 'Sort clothes', durationMinutes: 5 }],
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<TimerForm />);
+    // User manually types a name first
+    fireEvent.change(screen.getByLabelText('Timer Name'), { target: { value: 'My Custom Name' } });
+
+    fireEvent.change(screen.getByLabelText('Task description'), {
+      target: { value: 'do laundry' },
+    });
+    fireEvent.click(screen.getByText('Break it down ✨'));
+
+    await vi.waitFor(() => {
+      expect(screen.getByLabelText('Step 1 name')).toHaveValue('Sort clothes');
+    });
+
+    // Name was NOT overwritten
+    expect(screen.getByLabelText('Timer Name')).toHaveValue('My Custom Name');
+  });
+
+  it('saves AI-generated timer identically to manual creation', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        timerName: 'Do Laundry',
+        steps: [{ name: 'Sort clothes', durationMinutes: 5 }],
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<TimerForm />);
+    fireEvent.change(screen.getByLabelText('Task description'), {
+      target: { value: 'do laundry' },
+    });
+    fireEvent.click(screen.getByText('Break it down ✨'));
+
+    await vi.waitFor(() => {
+      expect(screen.getByLabelText('Timer Name')).toHaveValue('Do Laundry');
+    });
+
+    fireEvent.click(screen.getByText('Save Timer'));
+
+    await vi.waitFor(() => {
+      expect(mockCreateTimer).toHaveBeenCalledOnce();
+    });
+
+    expect(mockCreateTimer).toHaveBeenCalledWith(
+      'test-uid',
+      expect.objectContaining({
+        name: 'Do Laundry',
+        steps: expect.arrayContaining([
+          expect.objectContaining({ name: 'Sort clothes', plannedDuration: 300 }),
+        ]),
+      }),
     );
   });
 });

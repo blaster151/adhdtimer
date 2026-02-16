@@ -9,6 +9,7 @@ import { getTimers, deleteTimer, duplicateTimer, updateTimer } from '@/lib/fireb
 import { createSession } from '@/lib/firebase/sessions';
 import { Timestamp } from 'firebase/firestore';
 import type { TimerTemplate } from '@/types/timer';
+import type { RunSession } from '@/types/session';
 import { EmptyState } from '@/components/timer/empty-state';
 import { TimerCard } from '@/components/timer/timer-card';
 import { DeleteDialog } from '@/components/timer/delete-dialog';
@@ -27,7 +28,11 @@ function sortTimers(timers: TimerTemplate[]): TimerTemplate[] {
   });
 }
 
-export function TimerLibrary() {
+interface TimerLibraryProps {
+  activeSessions?: RunSession[];
+}
+
+export function TimerLibrary({ activeSessions = [] }: TimerLibraryProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [timers, setTimers] = useState<TimerTemplate[]>([]);
@@ -113,7 +118,7 @@ export function TimerLibrary() {
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-9 w-32" />
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
@@ -137,11 +142,12 @@ export function TimerLibrary() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3">
         {sorted.map((timer) => (
           <TimerCard
             key={timer.id}
             timer={timer}
+            activeSession={activeSessions.find((s) => s.timerId === timer.id)}
             onPlay={handlePlay}
             onEdit={handleEdit}
             onDelete={handleDeleteRequest}

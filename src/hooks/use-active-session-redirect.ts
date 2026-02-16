@@ -1,20 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { getActiveSession } from '@/lib/firebase/sessions';
+import { onActiveSessionsSnapshot } from '@/lib/firebase/sessions';
+import type { RunSession } from '@/types/session';
 
 /**
- * Checks for an active (running/paused) session after auth is confirmed.
- * Redirects to the running timer view if found.
+ * Subscribes to ALL active (running/paused) sessions in real time.
  *
- * Returns `{ checking }` — true while the active session query is in flight.
+ * Returns `{ checking, activeSessions }`.
+ * - `checking` is true while the initial snapshot is pending.
+ * - `activeSessions` is the full list of running/paused sessions.
  */
-export function useActiveSessionRedirect(): { checking: boolean } {
+export function useActiveSessions(): {
+  checking: boolean;
+  activeSessions: RunSession[];
+} {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [activeSessions, setActiveSessions] = useState<RunSession[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -23,24 +27,16 @@ export function useActiveSessionRedirect(): { checking: boolean } {
       return;
     }
 
-    let cancelled = false;
-
-    async function check() {
-      const { data: session } = await getActiveSession(user!.uid);
-      if (cancelled) return;
-      if (session) {
-        router.replace(`/app/sessions/${session.id}`);
-      } else {
+    const unsubscribe = onActiveSessionsSnapshot(
+      user.uid,
+      (sessions) => {
+        setActiveSessions(sessions);
         setChecking(false);
-      }
-    }
+      },
+    );
 
-    check();
+    return unsubscribe;
+  }, [user, authLoading]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [user, authLoading, router]);
-
-  return { checking };
+  return { checking, activeSessions };
 }

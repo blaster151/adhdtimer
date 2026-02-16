@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import { useActiveSessionRedirect } from './use-active-session-redirect';
-
-const mockReplace = vi.fn();
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { useActiveSessions } from './use-active-session-redirect';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    replace: mockReplace,
+    replace: vi.fn(),
     push: vi.fn(),
     prefetch: vi.fn(),
     back: vi.fn(),
@@ -25,10 +23,13 @@ vi.mock('@/hooks/use-auth', () => ({
   }),
 }));
 
-const mockGetActiveSession = vi.fn();
+const mockUnsubscribe = vi.fn();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockOnActiveSessionsSnapshot = vi.fn((..._args: any[]) => mockUnsubscribe);
 
 vi.mock('@/lib/firebase/sessions', () => ({
-  getActiveSession: (...args: unknown[]) => mockGetActiveSession(...args),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onActiveSessionsSnapshot: (...args: any[]) => mockOnActiveSessionsSnapshot(...args),
 }));
 
 vi.mock('firebase/auth', () => ({
@@ -49,87 +50,103 @@ vi.mock('firebase/app', () => ({
   getApp: vi.fn(() => ({})),
 }));
 
-describe('useActiveSessionRedirect', () => {
+/** Simulate the snapshot callback firing with sessions. */
+function fireSnapshot(sessions: { id: string; status: string }[]) {
+  const callback = mockOnActiveSessionsSnapshot.mock.calls[0]?.[1];
+  if (callback) {
+    act(() => callback(sessions));
+  }
+}
+
+describe('useActiveSessions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUser = { uid: 'test-uid' };
     mockAuthLoading = false;
-    mockGetActiveSession.mockResolvedValue({ data: null, error: null });
   });
 
-  it('redirects to active session when one is found', async () => {
-    mockGetActiveSession.mockResolvedValue({
-      data: { id: 'session-123', status: 'running' },
-      error: null,
-    });
+  it('returns activeSessions when running sessions are found', async () => {
+    const { result } = renderHook(() => useActiveSessions());
 
-    const { result } = renderHook(() => useActiveSessionRedirect());
-
-    expect(result.current.checking).toBe(true);
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/app/sessions/session-123');
-    });
-    expect(mockGetActiveSession).toHaveBeenCalledWith('test-uid');
-  });
-
-  it('sets checking to false when no active session found', async () => {
-    mockGetActiveSession.mockResolvedValue({ data: null, error: null });
-
-    const { result } = renderHook(() => useActiveSessionRedirect());
+    fireSnapshot([
+      { id: 'session-123', status: 'running' },
+      { id: 'session-456', status: 'paused' },
+    ]);
 
     await waitFor(() => {
       expect(result.current.checking).toBe(false);
+      expect(result.current.activeSessions).toHaveLength(2);
+      expect(result.current.activeSessions[0]).toEqual({ id: 'session-123', status: 'running' });
     });
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockOnActiveSessionsSnapshot).toHaveBeenCalledWith('test-uid', expect.any(Function));
+  });
+
+  it('sets checking to false and activeSessions to empty when no active sessions', async () => {
+    const { result } = renderHook(() => useActiveSessions());
+
+    fireSnapshot([]);
+
+    await waitFor(() => {
+      expect(result.current.checking).toBe(false);
+      expect(result.current.activeSessions).toEqual([]);
+    });
   });
 
   it('sets checking to false when user is not authenticated', async () => {
     mockUser = null;
 
-    const { result } = renderHook(() => useActiveSessionRedirect());
+    const { result } = renderHook(() => useActiveSessions());
 
     await waitFor(() => {
       expect(result.current.checking).toBe(false);
+      expect(result.current.activeSessions).toEqual([]);
     });
-    expect(mockGetActiveSession).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockOnActiveSessionsSnapshot).not.toHaveBeenCalled();
   });
 
-  it('waits for auth to finish loading before checking', async () => {
+  it('waits for auth to finish loading before subscribing', async () => {
     mockAuthLoading = true;
 
-    const { result } = renderHook(() => useActiveSessionRedirect());
+    const { result } = renderHook(() => useActiveSessions());
 
-    // Should stay in checking state while auth loads
     expect(result.current.checking).toBe(true);
-    expect(mockGetActiveSession).not.toHaveBeenCalled();
+    expect(mockOnActiveSessionsSnapshot).not.toHaveBeenCalled();
   });
 
-  it('redirects to paused session', async () => {
-    mockGetActiveSession.mockResolvedValue({
-      data: { id: 'paused-session', status: 'paused' },
-      error: null,
-    });
+  it('returns paused sessions in activeSessions', async () => {
+    const { result } = renderHook(() => useActiveSessions());
 
-    renderHook(() => useActiveSessionRedirect());
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/app/sessions/paused-session');
-    });
-  });
-
-  it('does not redirect when query returns error', async () => {
-    mockGetActiveSession.mockResolvedValue({
-      data: null,
-      error: 'Permission denied',
-    });
-
-    const { result } = renderHook(() => useActiveSessionRedirect());
+    fireSnapshot([{ id: 'paused-session', status: 'paused' }]);
 
     await waitFor(() => {
       expect(result.current.checking).toBe(false);
+      expect(result.current.activeSessions).toEqual([{ id: 'paused-session', status: 'paused' }]);
     });
-    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('unsubscribes on unmount', () => {
+    const { unmount } = renderHook(() => useActiveSessions());
+
+    expect(mockOnActiveSessionsSnapshot).toHaveBeenCalled();
+
+    unmount();
+
+    expect(mockUnsubscribe).toHaveBeenCalled();
+  });
+
+  it('clears activeSessions when all sessions end', async () => {
+    const { result } = renderHook(() => useActiveSessions());
+
+    fireSnapshot([{ id: 'session-123', status: 'running' }]);
+
+    await waitFor(() => {
+      expect(result.current.activeSessions).toHaveLength(1);
+    });
+
+    fireSnapshot([]);
+
+    await waitFor(() => {
+      expect(result.current.activeSessions).toEqual([]);
+    });
   });
 });

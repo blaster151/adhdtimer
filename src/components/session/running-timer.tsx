@@ -1,20 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
-import { useDeviceId } from '@/hooks/use-device-id';
 import { useFirestoreSession } from '@/hooks/use-firestore-session';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
 import { useTTS } from '@/hooks/use-tts';
 import { useWakeLock } from '@/hooks/use-wake-lock';
-import { updateSession } from '@/lib/firebase/sessions';
+
 import { PlaybackControls } from '@/components/session/playback-controls';
 import { TransitionOverlay } from '@/components/session/transition-overlay';
 import { ProgressRing } from '@/components/session/progress-ring';
 import { StepDots } from '@/components/session/step-dots';
 import { CompletionView } from '@/components/session/completion-view';
-import { ObserverBanner } from '@/components/session/observer-banner';
 import { calculatePace } from '@/lib/utils/pace';
 import { formatDuration, formatDurationSpeech, formatCountdown } from '@/lib/utils/time';
 import type { SessionStep, StepStatus } from '@/types/session';
@@ -60,7 +59,6 @@ function stepStatusClass(status: StepStatus): string {
 export function RunningTimer({ sessionId }: RunningTimerProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const deviceId = useDeviceId();
   const engine = useTimerEngine();
   const firestoreSession = useFirestoreSession(user?.uid, sessionId);
   const tts = useTTS();
@@ -209,12 +207,6 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
     };
   }, [engine.isRunning, engine.isPaused, engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Take Control handler — must be before early returns (hooks rules)
-  const handleTakeControl = useCallback(async () => {
-    if (!user || !engine.session) return;
-    await updateSession(user.uid, engine.session.id, { activeDeviceId: deviceId });
-  }, [user, engine.session, deviceId]);
-
   if (!engine.session) {
     return (
       <div className="mx-auto max-w-lg space-y-6">
@@ -233,9 +225,6 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   if (isCompleted) {
     return <CompletionView session={session} />;
   }
-
-  const isController = session.activeDeviceId === deviceId;
-  const isObserver = !isController;
 
   const isLastStep = session.currentStepIndex >= session.steps.length - 1;
   const totalPlannedDuration = session.steps.reduce((sum, s) => sum + s.plannedDuration, 0);
@@ -275,6 +264,14 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
+      {/* Back to Timers nav */}
+      <Link
+        href="/app"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        ← All Timers
+      </Link>
+
       {/* Header */}
       <div className="text-center relative">
         <h1 className="text-xl font-semibold text-foreground">{session.timerName}</h1>
@@ -345,18 +342,12 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         );
       })()}
 
-      {/* Observer banner */}
-      {isObserver && (
-        <ObserverBanner onTakeControl={handleTakeControl} />
-      )}
-
       {/* Playback controls */}
       <PlaybackControls
         isRunning={isRunning}
         isPaused={isPaused}
         isCompleted={false}
         isLastStep={isLastStep}
-        disabled={isObserver}
         onPause={engine.pause}
         onResume={engine.resume}
         onSkip={engine.skip}
@@ -364,7 +355,8 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         onExtend={engine.extend}
       />
 
-      {/* Step list */}
+      {/* Step list — only show when there are multiple steps */}
+      {session.steps.length > 1 && (
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground">Steps</h3>
         <ul className="space-y-1">
@@ -400,6 +392,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
           ))}
         </ul>
       </div>
+      )}
 
       {/* Total progress */}
       <div className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">

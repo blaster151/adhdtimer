@@ -1,21 +1,39 @@
-# Stage 1: Install dependencies
-FROM node:20-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# =================================================================
+# Multi-stage Dockerfile for ADHD Timer (Next.js on Cloud Run)
+# =================================================================
 
-# Stage 2: Build the application
-FROM node:20-alpine AS builder
+# ---- Base ----
+FROM node:20-alpine AS base
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+
+# ---- Dependencies ----
+FROM base AS deps
+COPY package.json package-lock.json* ./
+RUN npm ci --ignore-scripts
+
+# ---- Build ----
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Accept build-time args for NEXT_PUBLIC_* vars (baked into JS bundle at build time)
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_APP_URL
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
 RUN npm run build
 
-# Stage 3: Production image
-FROM node:20-alpine AS runner
-WORKDIR /app
+# ---- Production ----
+FROM base AS production
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=8080
 
 RUN addgroup --system --gid 1001 nodejs

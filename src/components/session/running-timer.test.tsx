@@ -185,60 +185,31 @@ describe('RunningTimer', () => {
     expect(screen.getAllByText('Breakfast').length).toBeGreaterThan(0);
   });
 
-  it('shows controls enabled in controller mode (activeDeviceId matches)', async () => {
+  it('shows controls enabled regardless of activeDeviceId', async () => {
     mockDeviceId = 'my-device-id';
     mockFirestoreSession.loading = false;
-    mockFirestoreSession.session = makeSessionData({ activeDeviceId: 'my-device-id' });
+    mockFirestoreSession.session = makeSessionData({ activeDeviceId: 'other-device' });
     render(<RunningTimer sessionId="session-1" />);
     await vi.waitFor(() => {
       expect(screen.getByText('Morning Routine')).toBeInTheDocument();
     });
-    // No observer banner
+    // No observer banner — all devices are equal
     expect(screen.queryByTestId('observer-banner')).not.toBeInTheDocument();
+    // Controls should be enabled even when activeDeviceId differs
+    expect(screen.getByLabelText('Skip step')).not.toBeDisabled();
+    expect(screen.getByLabelText('Stop timer')).not.toBeDisabled();
   });
 
-  it('shows observer banner when activeDeviceId differs', async () => {
-    mockDeviceId = 'my-device-id';
+  it('shows "All Timers" back link', async () => {
     mockFirestoreSession.loading = false;
-    mockFirestoreSession.session = makeSessionData({ activeDeviceId: 'other-device' });
+    mockFirestoreSession.session = makeSessionData();
     render(<RunningTimer sessionId="session-1" />);
     await vi.waitFor(() => {
       expect(screen.getByText('Morning Routine')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('observer-banner')).toBeInTheDocument();
-    expect(screen.getByText('Controlled from another device')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Take Control' })).toBeInTheDocument();
-  });
-
-  it('disables playback controls in observer mode', async () => {
-    mockDeviceId = 'my-device-id';
-    mockFirestoreSession.loading = false;
-    mockFirestoreSession.session = makeSessionData({ activeDeviceId: 'other-device' });
-    render(<RunningTimer sessionId="session-1" />);
-    await vi.waitFor(() => {
-      expect(screen.getByText('Morning Routine')).toBeInTheDocument();
-    });
-    // Skip and Stop should be disabled
-    expect(screen.getByLabelText('Skip step')).toBeDisabled();
-    expect(screen.getByLabelText('Stop timer')).toBeDisabled();
-  });
-
-  it('calls updateSession with device ID on Take Control click', async () => {
-    mockDeviceId = 'my-device-id';
-    mockFirestoreSession.loading = false;
-    mockFirestoreSession.session = makeSessionData({ activeDeviceId: 'other-device' });
-    render(<RunningTimer sessionId="session-1" />);
-    await vi.waitFor(() => {
-      expect(screen.getByText('Morning Routine')).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Take Control' }));
-    await vi.waitFor(() => {
-      expect(mockUpdateSession).toHaveBeenCalledWith(
-        'test-uid',
-        'session-1',
-        { activeDeviceId: 'my-device-id' },
-      );
-    });
+    const backLink = screen.getByRole('link', { name: /all timers/i });
+    expect(backLink).toBeInTheDocument();
+    expect(backLink).toHaveAttribute('href', '/app');
   });
 
   it('shows count-up display by default (no countdownMode)', async () => {

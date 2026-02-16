@@ -126,6 +126,7 @@ describe('useTimerEngine', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     mockTimestamp = 1000000;
+    vi.setSystemTime(new Date(mockTimestamp));
   });
 
   afterEach(() => {
@@ -493,5 +494,198 @@ describe('useTimerEngine', () => {
       await result.current.stop();
     });
     expect(mockUpdateSession).toHaveBeenCalled();
+  });
+
+  // ========================================
+  // Catch-up / reconnect tests
+  // ========================================
+
+  it('catches up through overdue steps on reconnect', async () => {
+    // Session started 10 minutes ago, step 0 had 5 min planned, step 1 has 5 min planned
+    // Step 0 started 10 min ago → 600s elapsed, 300s planned → overdue
+    // Step 1 should have started 5 min ago → 300s elapsed, 300s planned → also overdue
+    // Both steps overdue → session should complete
+    const startTime = mockTimestamp - 600_000; // 10 min ago
+    const runningSession: RunSession = {
+      id: 'session-123',
+      timerId: 'timer-1',
+      timerName: 'Test Timer',
+      status: 'running',
+      currentStepIndex: 0,
+      startedAt: Timestamp.fromDate(new Date(startTime)),
+      activeDeviceId: 'mock-device-id',
+      totalElapsedTime: 0,
+      steps: [
+        {
+          id: 'step-0',
+          name: 'Step 1',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'running' as const,
+          startedAt: Timestamp.fromDate(new Date(startTime)),
+        },
+        {
+          id: 'step-1',
+          name: 'Step 2',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'pending' as const,
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(runningSession);
+    });
+
+    // Both steps overdue → session should be completed
+    expect(result.current.isCompleted).toBe(true);
+    expect(result.current.session?.status).toBe('completed');
+    expect(result.current.session?.steps[0].status).toBe('completed');
+    expect(result.current.session?.steps[1].status).toBe('completed');
+  });
+
+  it('catches up to the correct in-progress step on reconnect', async () => {
+    // Session started 4 minutes ago, step 0 has 3 min planned, step 1 has 5 min planned
+    // Step 0: 240s elapsed, 180s planned → overdue, should be completed
+    // Step 1: should have ~60s elapsed (started at startTime + 180s), 300s planned → still in progress
+    const startTime = mockTimestamp - 240_000; // 4 min ago
+    const runningSession: RunSession = {
+      id: 'session-123',
+      timerId: 'timer-1',
+      timerName: 'Test Timer',
+      status: 'running',
+      currentStepIndex: 0,
+      startedAt: Timestamp.fromDate(new Date(startTime)),
+      activeDeviceId: 'mock-device-id',
+      totalElapsedTime: 0,
+      steps: [
+        {
+          id: 'step-0',
+          name: 'Step 1',
+          plannedDuration: 180, // 3 min
+          originalPlannedDuration: 180,
+          elapsedTime: 0,
+          status: 'running' as const,
+          startedAt: Timestamp.fromDate(new Date(startTime)),
+        },
+        {
+          id: 'step-1',
+          name: 'Step 2',
+          plannedDuration: 300, // 5 min
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'pending' as const,
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(runningSession);
+    });
+
+    // Should have advanced to step 1
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.session?.currentStepIndex).toBe(1);
+    expect(result.current.session?.steps[0].status).toBe('completed');
+    expect(result.current.session?.steps[1].status).toBe('running');
+    // Step 1 should show ~60s elapsed (started at startTime + 180s = 60s ago)
+    expect(result.current.elapsedTime).toBe(60);
+  });
+
+  it('handles paused session on reconnect without catch-up', async () => {
+    const runningSession: RunSession = {
+      id: 'session-123',
+      timerId: 'timer-1',
+      timerName: 'Test Timer',
+      status: 'paused',
+      currentStepIndex: 0,
+      startedAt: Timestamp.fromDate(new Date(mockTimestamp - 60_000)),
+      pausedAt: Timestamp.fromDate(new Date(mockTimestamp - 30_000)),
+      activeDeviceId: 'mock-device-id',
+      totalElapsedTime: 30,
+      steps: [
+        {
+          id: 'step-0',
+          name: 'Step 1',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 30,
+          status: 'paused' as const,
+          startedAt: Timestamp.fromDate(new Date(mockTimestamp - 60_000)),
+        },
+        {
+          id: 'step-1',
+          name: 'Step 2',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'pending' as const,
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(runningSession);
+    });
+
+    // Should stay paused, no catch-up
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.session?.currentStepIndex).toBe(0);
+    expect(result.current.elapsedTime).toBe(30);
+  });
+
+  it('reconnects to a running step that is not yet overdue', async () => {
+    // Step 0 started 2 min ago, has 5 min planned → not overdue, just resume
+    const startTime = mockTimestamp - 120_000; // 2 min ago
+    const runningSession: RunSession = {
+      id: 'session-123',
+      timerId: 'timer-1',
+      timerName: 'Test Timer',
+      status: 'running',
+      currentStepIndex: 0,
+      startedAt: Timestamp.fromDate(new Date(startTime)),
+      activeDeviceId: 'mock-device-id',
+      totalElapsedTime: 0,
+      steps: [
+        {
+          id: 'step-0',
+          name: 'Step 1',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'running' as const,
+          startedAt: Timestamp.fromDate(new Date(startTime)),
+        },
+        {
+          id: 'step-1',
+          name: 'Step 2',
+          plannedDuration: 300,
+          originalPlannedDuration: 300,
+          elapsedTime: 0,
+          status: 'pending' as const,
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(runningSession);
+    });
+
+    // Should still be on step 0, showing 120s elapsed
+    expect(result.current.session?.status).toBe('running');
+    expect(result.current.isRunning).toBe(true);
+    expect(result.current.session?.currentStepIndex).toBe(0);
+    expect(result.current.elapsedTime).toBe(120);
   });
 });
