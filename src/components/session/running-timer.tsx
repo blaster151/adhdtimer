@@ -147,40 +147,34 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
         });
       }
 
+      // Capture transition data in local variables so the setTimeout
+      // closure doesn't depend on engine.session (which may re-render
+      // and cancel the timeout before it fires — e.g. Firestore echo).
+      const { stepName, plannedDuration, stepType, isWaitingForAdvance } = engine.lastTransition;
+
       // TTS after 50ms gap (chime alerts attention, TTS delivers content)
-      const step = engine.session?.steps[engine.session.currentStepIndex];
-      if (step) {
-        const ttsTimer = setTimeout(() => {
-          // v2: Different TTS for waiting-for-advance
-          if (engine.isWaitingForAdvance) {
-            tts.speak(`Done. Next up: ${step.name}. Tap when ready.`);
-          } else {
-            const waitSuffix = step.type === 'wait' ? ' Waiting.' : '';
-            tts.speak(`${step.name}. ${formatDurationSpeech(step.plannedDuration)}.${waitSuffix}`);
-          }
-        }, 50);
-        // Clean up TTS timer on unmount
-        const overlayTimer = setTimeout(() => {
-          setOverlayVisible(false);
-          engine.clearTransition();
-        }, 4000);
-
-        setOverlayVisible(true);
-        return () => {
-          clearTimeout(ttsTimer);
-          clearTimeout(overlayTimer);
-        };
-      }
-
-      // Show overlay
-      setOverlayVisible(true);
-      const timer = setTimeout(() => {
+      const ttsTimer = setTimeout(() => {
+        // v2: Different TTS for waiting-for-advance
+        if (isWaitingForAdvance) {
+          tts.speak(`Done. Next up: ${stepName}. Tap when ready.`);
+        } else {
+          const waitSuffix = stepType === 'wait' ? ' Waiting.' : '';
+          tts.speak(`${stepName}. ${formatDurationSpeech(plannedDuration)}.${waitSuffix}`);
+        }
+      }, 50);
+      // Clean up TTS timer on unmount
+      const overlayTimer = setTimeout(() => {
         setOverlayVisible(false);
         engine.clearTransition();
       }, 4000);
-      return () => clearTimeout(timer);
+
+      setOverlayVisible(true);
+      return () => {
+        clearTimeout(ttsTimer);
+        clearTimeout(overlayTimer);
+      };
     }
-  }, [engine.lastTransition, engine.clearTransition, engine.session, tts]);
+  }, [engine.lastTransition, engine.clearTransition, tts]);
 
   // Announce first step via TTS on session start
   useEffect(() => {

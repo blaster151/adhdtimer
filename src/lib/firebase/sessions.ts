@@ -169,7 +169,7 @@ export async function getActiveSession(
   try {
     const q = query(
       sessionsCollection(userId),
-      where('status', 'in', ['running', 'paused']),
+      where('status', 'in', ['running', 'paused', 'waiting-for-advance', 'resolving-deferred']),
       orderBy('startedAt', 'desc'),
       limit(1),
     );
@@ -196,7 +196,7 @@ export function onActiveSessionSnapshot(
 ): () => void {
   const q = query(
     sessionsCollection(userId),
-    where('status', 'in', ['running', 'paused']),
+    where('status', 'in', ['running', 'paused', 'waiting-for-advance', 'resolving-deferred']),
     orderBy('startedAt', 'desc'),
     limit(1),
   );
@@ -225,7 +225,7 @@ export function onActiveSessionsSnapshot(
 ): () => void {
   const q = query(
     sessionsCollection(userId),
-    where('status', 'in', ['running', 'paused']),
+    where('status', 'in', ['running', 'paused', 'waiting-for-advance', 'resolving-deferred']),
     orderBy('startedAt', 'desc'),
   );
   return onSnapshot(

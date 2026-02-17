@@ -155,7 +155,7 @@ describe('TimerForm', () => {
   it('updates total duration when step duration changes', () => {
     render(<TimerForm />);
     // Click the duration to open tap-to-type editor
-    fireEvent.click(screen.getByLabelText('Step 1 duration'));
+    fireEvent.click(screen.getByLabelText('Step 1 duration \u2014 swipe to adjust'));
     const input = screen.getByLabelText('Step 1 duration input');
     fireEvent.change(input, { target: { value: '10' } });
     fireEvent.keyDown(input, { key: 'Enter' });

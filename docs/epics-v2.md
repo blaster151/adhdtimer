@@ -369,7 +369,9 @@ So that I don't forget anything I put off.
 
 ## Epic 8: Routines & Habits
 
-**Goal:** Transform one-off timers into repeatable scheduled routines with streak tracking and in-app awareness.
+**Goal:** Transform one-off timers into repeatable scheduled routines with streak tracking, in-app awareness, and personal theming.
+
+**Note:** Story 8.5 (Theme Selection) is independent of the schedule/streak stories and can be parallelized.
 
 **Business Value:** The app becomes a daily companion. "Morning Routine is due today" surfaces when you open the app. Quiet streak badges ("Day 6 ☕") reward consistency without pressure.
 
@@ -544,6 +546,39 @@ So that I get quiet encouragement without pressure.
 - Streak update: read current streak from template → calculate update → write back
 - Use Firestore transaction or update for atomic streak writes
 - localStorage key: `adhd-timer-show-streaks` (boolean)
+
+---
+
+### Story 8.5: User Theme Selection
+
+As a **user**,
+I want to choose from a curated set of color themes and have my choice persist across all my devices,
+So that my timer experience feels personally mine and visually comfortable.
+
+**Acceptance Criteria:**
+
+**Given** `src/lib/themes/` directory
+**When** theme definitions are created
+**Then:**
+
+1. **AC1:** 5 themes defined: Deep Forest 🌲 (default), Warm Dusk 🌅, Night Ocean 🌊, Soft Clay 🏺, Twilight Lavender 🌙
+2. **AC2:** `ThemeDefinition` contains all CSS custom property values (backgrounds, primary, semantic, shadcn tokens)
+3. **AC3:** Each theme passes WCAG AA contrast for text-on-background
+4. **AC4:** `useTheme()` hook reads/writes Firestore `users/{userId}.themeId`, caches in localStorage
+5. **AC5:** Theme change takes effect immediately via CSS custom property updates — no page reload
+6. **AC6:** Fast initial paint: localStorage read on load, Firestore reconciliation in background
+7. **AC7:** Theme picker in settings: emoji + name + 4-swatch preview, `role="radiogroup"`, keyboard navigable
+8. **AC8:** Falls back gracefully: Firestore → localStorage → Deep Forest default
+9. **AC9:** Firestore rules allow authenticated users to read/write their own `users/{userId}` doc
+10. **AC10:** Comprehensive test suite: theme definitions, CSS application, hook behavior, picker UI, Firestore persistence
+
+**Prerequisites:** Can be parallelized after Story 8.1 (independent of schedule/streak work)
+
+**Technical Notes:**
+- Full story doc: `docs/stories/8-5-user-theme-selection.md`
+- New files: `src/lib/themes/themes.ts`, `src/lib/themes/apply-theme.ts`, `src/hooks/use-theme.ts`, `src/components/settings/theme-picker.tsx`, `src/lib/firebase/user-preferences.ts`
+- Existing `globals.css` `:root` block unchanged — serves as CSS fallback
+- Theme palettes sourced from `docs/ux-color-themes.html` + new Twilight Lavender
 
 ---
 

@@ -215,7 +215,7 @@
 
 <div class="header">
   <h1>🎨 ADHD Timer — Color Theme Explorer</h1>
-  <p>Four dark-mode-first palettes designed for calm mornings, gentle guidance, and ADHD-friendly visual clarity. Click each theme to explore, then compare side-by-side.</p>
+  <p>Five dark-mode-first palettes designed for calm mornings, gentle guidance, and ADHD-friendly visual clarity. Click each theme to explore, then compare side-by-side.</p>
 </div>
 
 <nav class="theme-nav">
@@ -223,6 +223,7 @@
   <button onclick="showTheme('dusk')">🌅 Warm Dusk</button>
   <button onclick="showTheme('ocean')">🌊 Night Ocean</button>
   <button onclick="showTheme('clay')">🏺 Soft Clay</button>
+  <button onclick="showTheme('lavender')">🌙 Twilight Lavender</button>
   <button class="compare-btn" onclick="showCompare()">⚖️ Compare All</button>
 </nav>
 
@@ -739,6 +740,133 @@
 </section>
 
 <!-- ============================================================
+     THEME 5: TWILIGHT LAVENDER
+     Cool purples, soft violet, calming dusk.
+     ============================================================ -->
+<section id="theme-lavender" class="theme-section">
+  <h2 class="theme-title">🌙 Twilight Lavender</h2>
+  <p class="theme-subtitle">Cool and calming. Soft violet dusk with gentle purple tones. The palette that says "settle in, slow down, let the evening carry you."</p>
+
+  <div class="palette-section">
+    <h3>Background & Surface</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#0D0B11;"><span class="swatch-hex">#0D0B11</span><span class="swatch-label">Background</span></div>
+      <div class="swatch" style="background:#15121A;"><span class="swatch-hex">#15121A</span><span class="swatch-label">Surface</span></div>
+      <div class="swatch" style="background:#1E1A26;"><span class="swatch-hex">#1E1A26</span><span class="swatch-label">Elevated</span></div>
+      <div class="swatch" style="background:#2A2533;"><span class="swatch-hex">#2A2533</span><span class="swatch-label">Border</span></div>
+    </div>
+    <h3>Core Colors</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#A78BDB;"><span class="swatch-hex">#A78BDB</span><span class="swatch-label">Primary</span></div>
+      <div class="swatch" style="background:#BFA8E0;"><span class="swatch-hex">#BFA8E0</span><span class="swatch-label">Primary Soft</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Accent Warm</span></div>
+      <div class="swatch" style="background:#E4DEF0;"><span class="swatch-hex">#E4DEF0</span><span class="swatch-label">Text</span></div>
+      <div class="swatch" style="background:#7E7A8A;"><span class="swatch-hex">#7E7A8A</span><span class="swatch-label">Muted</span></div>
+    </div>
+    <h3>Semantic / Timer States</h3>
+    <div class="palette-row">
+      <div class="swatch" style="background:#6BB5A0;"><span class="swatch-hex">#6BB5A0</span><span class="swatch-label">Ahead</span></div>
+      <div class="swatch" style="background:#A78BDB;"><span class="swatch-hex">#A78BDB</span><span class="swatch-label">On Track</span></div>
+      <div class="swatch" style="background:#D4A96A;"><span class="swatch-hex">#D4A96A</span><span class="swatch-label">Behind</span></div>
+      <div class="swatch" style="background:#C47A6C;"><span class="swatch-hex">#C47A6C</span><span class="swatch-label">Warning</span></div>
+      <div class="swatch" style="background:#7A8ED4;"><span class="swatch-hex">#7A8ED4</span><span class="swatch-label">Info</span></div>
+    </div>
+  </div>
+
+  <div class="components-grid">
+    <div class="component-card">
+      <h4>Running Timer View</h4>
+      <div class="mock-timer" style="background:#15121A; color:#E4DEF0;">
+        <div class="step-name" style="color:#BFA8E0;">Shower</div>
+        <div class="progress-ring-container">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#2A2533;" />
+            <circle class="progress-ring-fill" cx="100" cy="100" r="88"
+              style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+            <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#2A2533;" />
+            <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74"
+              style="stroke:#A78BDB; stroke-dasharray:465; stroke-dashoffset:186;" />
+          </svg>
+        </div>
+        <div class="time-display" style="color:#E4DEF0;">5:23</div>
+        <div class="context-msg" style="color:#6BB5A0;">1 min ahead — nice pace</div>
+        <div class="mock-buttons">
+          <button class="mock-btn mock-btn-secondary" style="color:#E4DEF0;">⏸ Pause</button>
+          <button class="mock-btn" style="background:#A78BDB; color:#0D0B11;">⏭ Skip</button>
+          <button class="mock-btn mock-btn-ghost" style="color:#D4A96A;">+1 min</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Timer Library</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-library-card" style="background:#1E1A26; color:#E4DEF0;">
+          <div class="card-info">
+            <h5>Morning Routine</h5>
+            <p style="color:#7E7A8A;">5 steps · 33 min</p>
+          </div>
+          <div class="card-play" style="background:#A78BDB; color:#0D0B11;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#1E1A26; color:#E4DEF0;">
+          <div class="card-info">
+            <h5>Evening Wind-Down</h5>
+            <p style="color:#7E7A8A;">4 steps · 25 min</p>
+          </div>
+          <div class="card-play" style="background:#A78BDB; color:#0D0B11;">▶</div>
+        </div>
+        <div class="mock-library-card" style="background:#1E1A26; color:#E4DEF0; border: 2px dashed #2A2533;">
+          <div class="card-info">
+            <h5 style="color:#7E7A8A;">+ Create your first timer</h5>
+            <p style="color:#7E7A8A;">Tap to get started</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Step Transition</h4>
+      <div style="padding: 1rem;">
+        <div class="mock-toast" style="background:#1E1A26; color:#E4DEF0;">
+          <div style="font-weight:600;">Time to start <span style="color:#BFA8E0;">Get Dressed</span></div>
+          <div style="opacity:0.6; font-size:0.8rem; margin-top:0.25rem;">Step 2 of 5 · 1 min ahead</div>
+        </div>
+        <div class="mock-toast" style="background:rgba(212,169,106,0.12); color:#D4A96A; margin-top:0.5rem;">
+          <div style="font-weight:600;">Time to start <span>Breakfast</span></div>
+          <div style="opacity:0.7; font-size:0.8rem; margin-top:0.25rem;">Step 3 of 5 · 2 min behind</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-card">
+      <h4>Completion View</h4>
+      <div class="mock-completion" style="background:#15121A; color:#E4DEF0;">
+        <div class="emoji">☕</div>
+        <div class="done-text">Done! 38 minutes.</div>
+        <div class="summary" style="color:#6BB5A0;">3 min ahead — nice pace</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-val" style="color:#A78BDB;">5</div>
+            <div class="stat-label" style="color:#7E7A8A;">Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#D4A96A;">1</div>
+            <div class="stat-label" style="color:#7E7A8A;">Over</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:#7E7A8A;">0</div>
+            <div class="stat-label" style="color:#7E7A8A;">Skipped</div>
+          </div>
+        </div>
+        <div class="mock-buttons" style="margin-top:1.5rem;">
+          <button class="mock-btn" style="background:#A78BDB; color:#0D0B11;">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
      COMPARE ALL
      ============================================================ -->
 <div id="compare-all" class="compare-grid">
@@ -842,6 +970,32 @@
     <div class="semantic-row" style="margin-top:1rem;">
       <span class="semantic-chip" style="background:rgba(107,181,160,0.2); color:#6BB5A0;">Ahead</span>
       <span class="semantic-chip" style="background:rgba(204,123,92,0.2); color:#CC7B5C;">On Track</span>
+      <span class="semantic-chip" style="background:rgba(212,169,106,0.2); color:#D4A96A;">Behind</span>
+    </div>
+  </div>
+
+  <div class="compare-card">
+    <h3>🌙 Twilight Lavender</h3>
+    <div class="sub">Cool violet, soft dusk, calming purple</div>
+    <div class="mock-timer" style="background:#15121A; color:#E4DEF0; border-radius:16px; padding:1.5rem;">
+      <div class="step-name" style="color:#BFA8E0; font-size:1.2rem;">Shower</div>
+      <div class="progress-ring-container" style="width:140px; height:140px; margin:0.5rem auto;">
+        <svg width="140" height="140" viewBox="0 0 200 200">
+          <circle class="progress-ring-bg" cx="100" cy="100" r="88" style="stroke:#2A2533;" />
+          <circle class="progress-ring-fill" cx="100" cy="100" r="88" style="stroke:#6BB5A0; stroke-dasharray:553; stroke-dashoffset:166;" />
+          <circle class="progress-ring-inner-bg" cx="100" cy="100" r="74" style="stroke:#2A2533;" />
+          <circle class="progress-ring-inner-fill" cx="100" cy="100" r="74" style="stroke:#A78BDB; stroke-dasharray:465; stroke-dashoffset:186;" />
+        </svg>
+      </div>
+      <div class="time-display" style="font-size:2rem;">5:23</div>
+      <div class="context-msg" style="color:#6BB5A0; font-size:0.85rem;">1 min ahead</div>
+      <div style="margin-top:0.75rem;">
+        <button class="mock-btn" style="background:#A78BDB; color:#0D0B11; padding:0.5rem 1rem; font-size:0.8rem;">▶ Play</button>
+      </div>
+    </div>
+    <div class="semantic-row" style="margin-top:1rem;">
+      <span class="semantic-chip" style="background:rgba(107,181,160,0.2); color:#6BB5A0;">Ahead</span>
+      <span class="semantic-chip" style="background:rgba(167,139,219,0.2); color:#A78BDB;">On Track</span>
       <span class="semantic-chip" style="background:rgba(212,169,106,0.2); color:#D4A96A;">Behind</span>
     </div>
   </div>

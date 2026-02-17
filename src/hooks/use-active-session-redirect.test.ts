@@ -78,7 +78,7 @@ describe('useActiveSessions', () => {
       expect(result.current.activeSessions).toHaveLength(2);
       expect(result.current.activeSessions[0]).toEqual({ id: 'session-123', status: 'running' });
     });
-    expect(mockOnActiveSessionsSnapshot).toHaveBeenCalledWith('test-uid', expect.any(Function));
+    expect(mockOnActiveSessionsSnapshot).toHaveBeenCalledWith('test-uid', expect.any(Function), expect.any(Function));
   });
 
   it('sets checking to false and activeSessions to empty when no active sessions', async () => {

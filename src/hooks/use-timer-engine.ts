@@ -14,6 +14,9 @@ export interface TransitionEvent {
   stepNumber: number;
   totalSteps: number;
   timestamp: number;
+  plannedDuration: number;
+  stepType: string;
+  isWaitingForAdvance?: boolean;
 }
 
 export interface UseTimerEngineReturn {
@@ -115,11 +118,12 @@ export function useTimerEngine(): UseTimerEngineReturn {
     const steps = [...sess.steps.map((s) => ({ ...s }))];
     const currentIdx = sess.currentStepIndex;
 
-    // Complete/skip current step
+    // Complete/skip current step — calculate elapsed BEFORE changing status
+    // so calcStepElapsed sees 'running' and computes from startedAt
     const currentStep = steps[currentIdx];
+    currentStep.elapsedTime = calcStepElapsed(currentStep);
     currentStep.status = stepStatus;
     currentStep.completedAt = now;
-    currentStep.elapsedTime = calcStepElapsed(currentStep);
 
     // v2: If this was a deferred step being resolved, go back to deferred resolution
     if (currentStep.wasDeferred) {
@@ -205,6 +209,9 @@ export function useTimerEngine(): UseTimerEngineReturn {
         stepNumber: nextIdx + 1,
         totalSteps: steps.length,
         timestamp: Date.now(),
+        plannedDuration: steps[nextIdx].plannedDuration,
+        stepType: steps[nextIdx].type ?? 'task',
+        isWaitingForAdvance: true,
       });
 
       await persistSession(waitingSession);
@@ -246,6 +253,8 @@ export function useTimerEngine(): UseTimerEngineReturn {
         stepNumber: nextIdx + 1,
         totalSteps: steps.length,
         timestamp: Date.now(),
+        plannedDuration: steps[nextIdx].plannedDuration,
+        stepType: steps[nextIdx].type ?? 'task',
       });
 
       await persistSession(checkpointSession);
@@ -270,6 +279,8 @@ export function useTimerEngine(): UseTimerEngineReturn {
       stepNumber: nextIdx + 1,
       totalSteps: steps.length,
       timestamp: Date.now(),
+      plannedDuration: steps[nextIdx].plannedDuration,
+      stepType: steps[nextIdx].type ?? 'task',
     });
 
     await persistSession(updatedSession);
@@ -635,9 +646,9 @@ export function useTimerEngine(): UseTimerEngineReturn {
     const currentIdx = sess.currentStepIndex;
     const currentStep = steps[currentIdx];
 
-    // Mark step as deferred
-    currentStep.status = 'deferred';
+    // Mark step as deferred — calculate elapsed BEFORE changing status
     currentStep.elapsedTime = calcStepElapsed(currentStep);
+    currentStep.status = 'deferred';
     currentStep.completedAt = now;
     currentStep.wasDeferred = true;
 
@@ -714,6 +725,9 @@ export function useTimerEngine(): UseTimerEngineReturn {
         stepNumber: nextIdx + 1,
         totalSteps: steps.length,
         timestamp: Date.now(),
+        plannedDuration: steps[nextIdx].plannedDuration,
+        stepType: steps[nextIdx].type ?? 'task',
+        isWaitingForAdvance: true,
       });
 
       await persistSession(waitingSession);
@@ -744,6 +758,8 @@ export function useTimerEngine(): UseTimerEngineReturn {
       stepNumber: nextIdx + 1,
       totalSteps: steps.length,
       timestamp: Date.now(),
+      plannedDuration: steps[nextIdx].plannedDuration,
+      stepType: steps[nextIdx].type ?? 'task',
     });
 
     await persistSession(updatedSession);

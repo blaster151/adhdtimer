@@ -237,6 +237,28 @@ describe('useTimerEngine', () => {
     expect(result.current.session?.steps[1].status).toBe('running');
   });
 
+  it('skip fires lastTransition for TTS/chime', async () => {
+    const session = makeIdleSession(3);
+    const { result } = renderHook(() => useTimerEngine());
+
+    await act(async () => {
+      await result.current.startFromSession(session);
+    });
+
+    expect(result.current.lastTransition).toBeNull();
+
+    await act(async () => {
+      await result.current.skip();
+    });
+
+    expect(result.current.lastTransition).not.toBeNull();
+    expect(result.current.lastTransition?.stepName).toBe(result.current.session?.steps[1].name);
+    expect(result.current.lastTransition?.stepNumber).toBe(2);
+    expect(result.current.lastTransition?.totalSteps).toBe(3);
+    expect(result.current.lastTransition?.plannedDuration).toBe(result.current.session?.steps[1].plannedDuration);
+    expect(result.current.lastTransition?.stepType).toBeDefined();
+  });
+
   it('skip on last step completes the session', async () => {
     const session = makeIdleSession(1); // single step
     const { result } = renderHook(() => useTimerEngine());

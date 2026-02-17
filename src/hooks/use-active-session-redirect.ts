@@ -33,6 +33,11 @@ export function useActiveSessions(): {
         setActiveSessions(sessions);
         setChecking(false);
       },
+      (error) => {
+        console.error('Active sessions query failed:', error);
+        // Don't hang on skeleton forever — show the library even if query fails
+        setChecking(false);
+      },
     );
 
     return unsubscribe;

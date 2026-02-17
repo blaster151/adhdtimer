@@ -55,7 +55,7 @@ export function SortableStepRow({
 
   function handleDurationTap() {
     if (swipe.isSwiping) return;
-    setEditValue(String(step.plannedDuration / 60));
+    setEditValue(formatDuration(step.plannedDuration));
     setIsEditing(true);
     // Focus will happen on next render via autoFocus
   }
@@ -172,6 +172,7 @@ export function SortableStepRow({
             onKeyDown={handleEditKeyDown}
             className="w-20 text-center"
             aria-label={`Step ${index + 1} duration input`}
+            placeholder="mm:ss"
             autoFocus
           />
         ) : (
@@ -179,7 +180,7 @@ export function SortableStepRow({
             role="button"
             tabIndex={0}
             className="flex h-9 w-20 cursor-grab select-none items-center justify-center rounded-md border border-input bg-background text-sm active:cursor-grabbing"
-            aria-label={`Step ${index + 1} duration`}
+            aria-label={`Step ${index + 1} duration — swipe to adjust`}
             onClick={handleDurationTap}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -196,7 +197,6 @@ export function SortableStepRow({
             {formatDuration(step.plannedDuration)}
           </div>
         )}
-        <span className="text-xs text-muted-foreground">min</span>
       </div>
       )}
 

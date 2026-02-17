@@ -19,3 +19,5 @@
 
 Issues? Report them at [4m[1mhttps://github.com/firebase/firebase-tools/issues[22m[24m and attach the *-debug.log files.
  
+[33m[1m! [22m[39m Multiple projectIds are not recommended in single project mode. Requested project ID demo-adhdtimer, but the emulator is configured for adhdtimer-2026. To opt-out of single project mode add/set the '"singleProjectMode"' false' property in the firebase.json emulators config.
+[33m[1m! [22m[39m Multiple projectIds are not recommended in single project mode. Requested project ID demo-adhdtimer, but the emulator is configured for adhdtimer-2026. To opt-out of single project mode add/set the '"singleProjectMode"' false' property in the firebase.json emulators config.

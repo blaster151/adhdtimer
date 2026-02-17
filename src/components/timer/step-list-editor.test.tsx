@@ -110,7 +110,7 @@ describe('StepListEditor', () => {
   it('opens tap-to-type input when duration is clicked', () => {
     const onChange = vi.fn();
     render(<StepListEditor steps={defaultSteps} onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText('Step 1 duration'));
+    fireEvent.click(screen.getByLabelText('Step 1 duration \u2014 swipe to adjust'));
     expect(screen.getByLabelText('Step 1 duration input')).toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe('StepListEditor', () => {
     const onChange = vi.fn();
     render(<StepListEditor steps={defaultSteps} onChange={onChange} />);
     // Click duration to open editor
-    fireEvent.click(screen.getByLabelText('Step 1 duration'));
+    fireEvent.click(screen.getByLabelText('Step 1 duration \u2014 swipe to adjust'));
     const input = screen.getByLabelText('Step 1 duration input');
     fireEvent.change(input, { target: { value: '10m' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -130,7 +130,7 @@ describe('StepListEditor', () => {
   it('reverts invalid duration on blur in tap-to-type input', () => {
     const onChange = vi.fn();
     render(<StepListEditor steps={defaultSteps} onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText('Step 1 duration'));
+    fireEvent.click(screen.getByLabelText('Step 1 duration \u2014 swipe to adjust'));
     const input = screen.getByLabelText('Step 1 duration input');
     fireEvent.change(input, { target: { value: 'abc' } });
     fireEvent.blur(input);

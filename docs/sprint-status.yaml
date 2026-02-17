@@ -106,12 +106,13 @@ development_status:
   7-5-e2e-playwright-test-suite: in-progress
   epic-7-retrospective: optional
 
-  # Epic 8: Routines & Habits (4 stories)
+  # Epic 8: Routines & Habits (5 stories)
   epic-8: backlog
   8-1-schedule-configuration-ui: backlog
   8-2-schedule-utility-functions-and-due-today-logic: backlog
   8-3-due-today-section-and-streak-badges-in-timer-library: backlog
   8-4-streak-settings-and-streak-update-on-completion: backlog
+  8-5-user-theme-selection: backlog
   epic-8-retrospective: optional
 
   # Epic 9: Learning Companion (4 stories)

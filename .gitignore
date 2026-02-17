@@ -22,6 +22,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Firebase/Firestore emulator logs
+firebase-debug.log
+firestore-debug.log
+emulator-stdout.log
+
 # IDE
 .idea/
 *.swp
