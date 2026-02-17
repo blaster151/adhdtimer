@@ -94,6 +94,7 @@ export function SortableStepRow({
       className={`flex items-center gap-2 rounded-md border border-border bg-surface p-2 ${
         isDragging ? 'z-10 scale-[1.02] opacity-90 shadow-lg' : ''
       }`}
+      data-testid="step-editor"
     >
       {/* Drag handle */}
       <button

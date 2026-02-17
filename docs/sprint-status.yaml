@@ -97,12 +97,13 @@ development_status:
   6-5-checkpoint-playback: complete
   epic-6-retrospective: optional
 
-  # Epic 7: Playback Evolution (4 stories)
-  epic-7: contexted
-  7-1-pause-between-steps-toggle-and-ui: drafted
-  7-2-manual-advance-playback: drafted
-  7-3-defer-step-action-and-tracking: drafted
-  7-4-deferred-step-resolution: drafted
+  # Epic 7: Playback Evolution (4 stories + e2e)
+  epic-7: done
+  7-1-pause-between-steps-toggle-and-ui: complete
+  7-2-manual-advance-playback: complete
+  7-3-defer-step-action-and-tracking: complete
+  7-4-deferred-step-resolution: complete
+  7-5-e2e-playwright-test-suite: in-progress
   epic-7-retrospective: optional
 
   # Epic 8: Routines & Habits (4 stories)

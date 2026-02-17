@@ -27,9 +27,12 @@ export function TimerCard({ timer, activeSession, onPlay, onEdit, onDelete, onDu
   const isActive = !!activeSession;
 
   return (
-    <Card className={`border-border bg-surface transition-colors hover:bg-elevated ${
-      isActive ? 'ring-1 ring-primary/40' : ''
-    }`}>
+    <Card
+      className={`border-border bg-surface transition-colors hover:bg-elevated ${
+        isActive ? 'ring-1 ring-primary/40' : ''
+      }`}
+      data-testid="timer-card"
+    >
       <CardContent className="flex items-center gap-3 p-4">
         {/* Timer info — clickable to open/edit */}
         <button

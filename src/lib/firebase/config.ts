@@ -1,10 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  connectFirestoreEmulator,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -31,5 +32,19 @@ export const db = alreadyInitialized
         tabManager: persistentMultipleTabManager(),
       }),
     });
+
+// Connect to Firebase Emulators when env vars are set (e2e testing / local dev)
+if (!alreadyInitialized) {
+  const authEmulatorHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+  if (authEmulatorHost) {
+    connectAuthEmulator(auth, `http://${authEmulatorHost}`, { disableWarnings: true });
+  }
+
+  const firestoreEmulatorHost = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST;
+  if (firestoreEmulatorHost) {
+    const [host, port] = firestoreEmulatorHost.split(':');
+    connectFirestoreEmulator(db, host, parseInt(port, 10));
+  }
+}
 
 export default app;

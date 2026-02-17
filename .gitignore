@@ -35,6 +35,11 @@ Thumbs.db
 # Misc
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
 .github/chatmodes/bmad-agent-bmm-analyst.chatmode.md
 .github/chatmodes/bmad-agent-bmm-architect.chatmode.md
 .github/chatmodes/bmad-agent-bmm-dev.chatmode.md
