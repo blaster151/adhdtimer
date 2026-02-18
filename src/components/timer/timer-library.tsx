@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { getDeviceId } from '@/hooks/use-device-id';
 import { useDueToday } from '@/hooks/use-due-today';
+import { useSettings } from '@/hooks/use-settings';
 import { useStreakValidation } from '@/hooks/use-streak-validation';
+import { consumeStreakMilestone } from '@/hooks/use-streak-update';
 import { getTimers, deleteTimer, duplicateTimer, updateTimer } from '@/lib/firebase/timers';
 import { createSession } from '@/lib/firebase/sessions';
 import { Timestamp } from 'firebase/firestore';
@@ -30,14 +32,6 @@ function sortTimers(timers: TimerTemplate[]): TimerTemplate[] {
   });
 }
 
-const SHOW_STREAKS_KEY = 'adhd-timer-show-streaks';
-
-function getShowStreaks(): boolean {
-  if (typeof window === 'undefined') return true;
-  const stored = localStorage.getItem(SHOW_STREAKS_KEY);
-  return stored === null ? true : stored === 'true';
-}
-
 interface TimerLibraryProps {
   activeSessions?: RunSession[];
 }
@@ -48,7 +42,15 @@ export function TimerLibrary({ activeSessions = [] }: TimerLibraryProps) {
   const [timers, setTimers] = useState<TimerTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<TimerTemplate | null>(null);
-  const [showStreaks] = useState(getShowStreaks);
+  const { showStreaks } = useSettings();
+
+  // Show milestone toast if one was stored during session completion
+  useEffect(() => {
+    const milestone = consumeStreakMilestone();
+    if (milestone) {
+      toast.success(`${milestone.timerName}: Day ${milestone.count} — ${milestone.message}`);
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;

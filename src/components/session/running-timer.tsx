@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirestoreSession } from '@/hooks/use-firestore-session';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
+import { useStreakUpdate } from '@/hooks/use-streak-update';
 import { useTTS } from '@/hooks/use-tts';
 import { useWakeLock } from '@/hooks/use-wake-lock';
 import { useCheckpoint } from '@/hooks/use-checkpoint';
@@ -66,6 +67,7 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
   const { user } = useAuth();
   const engine = useTimerEngine();
   const firestoreSession = useFirestoreSession(user?.uid, sessionId);
+  const { updateStreakOnCompletion } = useStreakUpdate();
   const tts = useTTS();
   const wakeLock = useWakeLock();
   const chimeRef = useRef<HTMLAudioElement | null>(null);
@@ -241,6 +243,13 @@ export function RunningTimer({ sessionId }: RunningTimerProps) {
       tts.cancel();
     }
   }, [engine.isCompleted, tts]);
+
+  // Update streak when session completes
+  useEffect(() => {
+    if (engine.isCompleted && engine.session?.timerId) {
+      updateStreakOnCompletion(engine.session.timerId, new Date());
+    }
+  }, [engine.isCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wake lock lifecycle: acquire when running or waiting, release when paused/completed
   useEffect(() => {
