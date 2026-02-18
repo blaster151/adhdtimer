@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { getDeviceId } from '@/hooks/use-device-id';
+import { useDueToday } from '@/hooks/use-due-today';
+import { useStreakValidation } from '@/hooks/use-streak-validation';
 import { getTimers, deleteTimer, duplicateTimer, updateTimer } from '@/lib/firebase/timers';
 import { createSession } from '@/lib/firebase/sessions';
 import { Timestamp } from 'firebase/firestore';
@@ -28,6 +30,14 @@ function sortTimers(timers: TimerTemplate[]): TimerTemplate[] {
   });
 }
 
+const SHOW_STREAKS_KEY = 'adhd-timer-show-streaks';
+
+function getShowStreaks(): boolean {
+  if (typeof window === 'undefined') return true;
+  const stored = localStorage.getItem(SHOW_STREAKS_KEY);
+  return stored === null ? true : stored === 'true';
+}
+
 interface TimerLibraryProps {
   activeSessions?: RunSession[];
 }
@@ -38,6 +48,7 @@ export function TimerLibrary({ activeSessions = [] }: TimerLibraryProps) {
   const [timers, setTimers] = useState<TimerTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<TimerTemplate | null>(null);
+  const [showStreaks] = useState(getShowStreaks);
 
   useEffect(() => {
     if (!user) return;
@@ -53,6 +64,18 @@ export function TimerLibrary({ activeSessions = [] }: TimerLibraryProps) {
 
     fetchTimers();
   }, [user]);
+
+  // Streak validation — silently resets stale streaks on load
+  const handleTimerUpdate = useCallback((timerId: string, updates: Partial<TimerTemplate>) => {
+    setTimers((prev) =>
+      prev.map((t) => (t.id === timerId ? { ...t, ...updates } : t)),
+    );
+  }, []);
+
+  useStreakValidation(timers, handleTimerUpdate);
+
+  // Due-today split
+  const { dueToday, rest, completedTodayIds } = useDueToday(timers);
 
   async function handlePlay(timer: TimerTemplate) {
     if (!user) return;
@@ -131,7 +154,24 @@ export function TimerLibrary({ activeSessions = [] }: TimerLibraryProps) {
     return <EmptyState />;
   }
 
-  const sorted = sortTimers(timers);
+  const sorted = sortTimers(rest);
+
+  // Shared card props builder
+  const cardProps = (timer: TimerTemplate, isDueTodayCard: boolean) => ({
+    key: timer.id,
+    timer,
+    activeSession: activeSessions.find((s) => s.timerId === timer.id),
+    onPlay: handlePlay,
+    onEdit: handleEdit,
+    onDelete: handleDeleteRequest,
+    onDuplicate: handleDuplicate,
+    ...(isDueTodayCard && {
+      completedToday: completedTodayIds.has(timer.id),
+      streakCount: timer.streak?.currentCount,
+      timeOfDay: timer.schedule?.timeOfDay,
+      showStreak: showStreaks,
+    }),
+  });
 
   return (
     <div className="space-y-4">
@@ -142,19 +182,33 @@ export function TimerLibrary({ activeSessions = [] }: TimerLibraryProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        {sorted.map((timer) => (
-          <TimerCard
-            key={timer.id}
-            timer={timer}
-            activeSession={activeSessions.find((s) => s.timerId === timer.id)}
-            onPlay={handlePlay}
-            onEdit={handleEdit}
-            onDelete={handleDeleteRequest}
-            onDuplicate={handleDuplicate}
-          />
-        ))}
-      </div>
+      {/* DUE TODAY section — only renders when there are due timers */}
+      {dueToday.length > 0 && (
+        <section className="space-y-3" aria-label="Due today">
+          <h2 className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+            DUE TODAY
+          </h2>
+          <div className="grid grid-cols-1 gap-3">
+            {dueToday.map((timer) => (
+              <TimerCard {...cardProps(timer, true)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ALL TIMERS section */}
+      <section className={`space-y-3 ${dueToday.length > 0 ? 'pt-3' : ''}`} aria-label="All timers">
+        {dueToday.length > 0 && (
+          <h2 className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+            ALL TIMERS
+          </h2>
+        )}
+        <div className="grid grid-cols-1 gap-3">
+          {sorted.map((timer) => (
+            <TimerCard {...cardProps(timer, false)} />
+          ))}
+        </div>
+      </section>
 
       {deleteTarget && (
         <DeleteDialog

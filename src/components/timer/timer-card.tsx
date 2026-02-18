@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import type { TimerTemplate } from '@/types/timer';
+import type { TimerTemplate, TimeOfDay } from '@/types/timer';
 import type { RunSession } from '@/types/session';
 import { formatDuration, formatRelativeDate } from '@/lib/utils/time';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TimeOfDayIcon } from '@/components/timer/time-of-day-icon';
+import { StreakBadge } from '@/components/timer/streak-badge';
+import { CompletionBadge } from '@/components/timer/completion-badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,20 +23,40 @@ interface TimerCardProps {
   onEdit?: (timer: TimerTemplate) => void;
   onDelete?: (timer: TimerTemplate) => void;
   onDuplicate?: (timer: TimerTemplate) => void;
+  /** Timer was completed today — shows ✓ Done badge and dims card */
+  completedToday?: boolean;
+  /** Active streak count — shows streak badge when > 0 and showStreak is true */
+  streakCount?: number;
+  /** Time-of-day from schedule — shows icon in top-right */
+  timeOfDay?: TimeOfDay;
+  /** Whether to show streak badges (user setting) */
+  showStreak?: boolean;
 }
 
-export function TimerCard({ timer, activeSession, onPlay, onEdit, onDelete, onDuplicate }: TimerCardProps) {
+export function TimerCard({ timer, activeSession, onPlay, onEdit, onDelete, onDuplicate, completedToday, streakCount, timeOfDay, showStreak }: TimerCardProps) {
   const lastUsed = timer.lastUsedAt ? formatRelativeDate(timer.lastUsedAt.toDate()) : 'Never';
   const isActive = !!activeSession;
 
   return (
     <Card
-      className={`border-border bg-surface transition-colors hover:bg-elevated ${
+      className={`relative border-border bg-surface transition-colors hover:bg-elevated ${
         isActive ? 'ring-1 ring-primary/40' : ''
-      }`}
+      } ${completedToday ? 'opacity-80' : ''}`}
       data-testid="timer-card"
     >
       <CardContent className="flex items-center gap-3 p-4">
+        {/* Completion badge — top-left */}
+        {completedToday && (
+          <div className="absolute top-2 left-3">
+            <CompletionBadge />
+          </div>
+        )}
+        {/* Time-of-day icon — top-right */}
+        {timeOfDay && (
+          <div className="absolute top-2 right-3">
+            <TimeOfDayIcon timeOfDay={timeOfDay} />
+          </div>
+        )}
         {/* Timer info — clickable to open/edit */}
         <button
           type="button"
@@ -69,7 +92,11 @@ export function TimerCard({ timer, activeSession, onPlay, onEdit, onDelete, onDu
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-1">
-          {isActive ? (
+          {completedToday ? (
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-on-track/15 text-lg text-on-track" aria-label={`${timer.name} completed`}>
+              ✓
+            </span>
+          ) : isActive ? (
             <Button
               variant="outline"
               size="sm"
@@ -117,6 +144,13 @@ export function TimerCard({ timer, activeSession, onPlay, onEdit, onDelete, onDu
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* Streak badge — bottom-right */}
+        {showStreak && streakCount && streakCount > 0 && (
+          <div className="absolute right-3 bottom-2">
+            <StreakBadge count={streakCount} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

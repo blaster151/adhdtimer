@@ -6,10 +6,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { createTimer, updateTimer } from '@/lib/firebase/timers';
 import { formatDuration } from '@/lib/utils/time';
-import type { Step, TimerTemplate } from '@/types/timer';
+import type { Step, TimerTemplate, Schedule } from '@/types/timer';
 import { StepListEditor } from '@/components/timer/step-list-editor';
 import { AIBreakdownPanel } from '@/components/timer/ai-breakdown-panel';
 import type { AIBreakdownStep } from '@/components/timer/ai-breakdown-panel';
+import { ScheduleSection } from '@/components/timer-form/schedule-section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +34,12 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
   );
   const [pauseBetweenSteps, setPauseBetweenSteps] = useState(
     initialTimer?.pauseBetweenSteps ?? false,
+  );
+  const [schedule, setSchedule] = useState<Schedule | undefined>(
+    initialTimer?.schedule,
+  );
+  const [streakEnabled, setStreakEnabled] = useState(
+    !!initialTimer?.streak,
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isNameFromAI, setIsNameFromAI] = useState(false);
@@ -82,6 +89,14 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
         ...s,
         name: s.name.trim(),
       })),
+      schedule: schedule ?? undefined,
+      streak: streakEnabled
+        ? initialTimer?.streak ?? {
+            currentCount: 0,
+            lastCompletedDate: '',
+            startDate: '',
+          }
+        : undefined,
     };
 
     const { error } = isEditMode
@@ -181,6 +196,14 @@ export function TimerForm({ initialTimer }: TimerFormProps) {
           aria-label="Pause between steps"
         />
       </div>
+
+      {/* Schedule Section */}
+      <ScheduleSection
+        schedule={schedule}
+        onScheduleChange={setSchedule}
+        streakEnabled={streakEnabled}
+        onStreakEnabledChange={setStreakEnabled}
+      />
 
       {/* Total Duration */}
       <div className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">

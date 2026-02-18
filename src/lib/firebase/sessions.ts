@@ -237,3 +237,30 @@ export function onActiveSessionsSnapshot(
     (err) => onError?.(err),
   );
 }
+
+/**
+ * Query for timer IDs that were completed today.
+ * Returns a Set of timer IDs for O(1) lookup.
+ */
+export async function getCompletedTodayIds(
+  userId: string,
+  today: Date = new Date(),
+): Promise<{ data: Set<string>; error: string | null }> {
+  try {
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    const q = query(
+      sessionsCollection(userId),
+      where('status', '==', 'completed'),
+      where('completedAt', '>=', Timestamp.fromDate(startOfDay)),
+      where('completedAt', '<', Timestamp.fromDate(endOfDay)),
+    );
+    const snap = await getDocs(q);
+    const ids = new Set<string>(snap.docs.map((d) => (d.data() as RunSession).timerId));
+    return { data: ids, error: null };
+  } catch (err) {
+    return { data: new Set(), error: (err as Error).message };
+  }
+}
